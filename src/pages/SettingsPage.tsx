@@ -1,11 +1,9 @@
+// src/pages/SettingsPage.tsx
 import { useEffect, useState } from "react";
-import {
-  getSettings,
-  updateSettings,
-  getDevices,
-} from "@/services/mockApi";
+import { getSettings, updateSettings, getDevices } from "@/services/mockApi";
 import type { Settings, Device } from "@/services/mockApi";
 import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -14,56 +12,156 @@ export default function SettingsPage() {
   const [form, setForm] = useState<Partial<Settings>>({});
 
   useEffect(() => {
-    getDevices(user!.role === "admin" ? undefined : user!.id).then(devs => {
+    getDevices(user!.role === "admin" ? undefined : user!.id).then((devs) => {
       setDevices(devs);
       if (devs.length) setSelected(devs[0].mac);
     });
   }, [user]);
 
   useEffect(() => {
-    if (selected) getSettings(selected).then(s => setForm(s || {}));
+    if (!selected) return;
+    getSettings(selected).then((s) => setForm(s || {}));
   }, [selected]);
 
+  const validateForm = (): boolean => {
+    const { onHour, offHour, soilMin, soilMax } = form;
+
+    if (onHour !== undefined && (onHour < 0 || onHour > 23)) {
+      toast.error("On Hour must be between 0 and 23");
+      return false;
+    }
+
+    if (offHour !== undefined && (offHour < 0 || offHour > 23)) {
+      toast.error("Off Hour must be between 0 and 23");
+      return false;
+    }
+
+    if (soilMin !== undefined && soilMax !== undefined && soilMin >= soilMax) {
+      toast.error("Soil Min should be less than Soil Max");
+      return false;
+    }
+
+    return true;
+  };
+
   const save = async () => {
+    if (!validateForm()) return;
+
     await updateSettings(selected, form);
-    alert("Settings saved");
+    toast.success("Settings saved");
   };
 
   return (
     <div>
       <h1 className="text-xl font-semibold mb-4">Settings</h1>
+
       <select
         className="input mb-4"
         value={selected}
-        onChange={e => setSelected(e.target.value)}
+        onChange={(e) => setSelected(e.target.value)}
       >
-        {devices.map(d => (
+        {devices.map((d) => (
           <option key={d.mac} value={d.mac}>
             {d.name}
           </option>
         ))}
       </select>
+
       {selected && (
         <div className="space-y-4">
-          <label className="block">
-            <span>Soil Min</span>
+          <label className="flex items-center gap-2">
             <input
-              type="number"
-              className="input mt-1"
-              value={form.soilMin ?? ""}
-              onChange={e => setForm({ ...form, soilMin: +e.target.value })}
+              type="checkbox"
+              checked={form.wateringManual ?? false}
+              onChange={(e) =>
+                setForm({ ...form, wateringManual: e.target.checked })
+              }
             />
+            Manual watering
           </label>
+
+          <div className="grid grid-cols-2 gap-4">
+            <label>
+              <span>Soil Min (%)</span>
+              <input
+                type="number"
+                className="input mt-1"
+                value={form.soilMin ?? ""}
+                onChange={(e) =>
+                  setForm({ ...form, soilMin: +e.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span>Soil Max (%)</span>
+              <input
+                type="number"
+                className="input mt-1"
+                value={form.soilMax ?? ""}
+                onChange={(e) =>
+                  setForm({ ...form, soilMax: +e.target.value })
+                }
+              />
+            </label>
+          </div>
+
           <label className="block">
-            <span>Soil Max</span>
-            <input
-              type="number"
+            <span>Fertiliser hours</span>
+            <select
+              multiple
               className="input mt-1"
-              value={form.soilMax ?? ""}
-              onChange={e => setForm({ ...form, soilMax: +e.target.value })}
-            />
+              value={form.fertHours?.map(String) ?? []}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  fertHours: Array.from(
+                    e.target.selectedOptions,
+                    (o) => +o.value
+                  ),
+                })
+              }
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>
+                  {h}:00
+                </option>
+              ))}
+            </select>
           </label>
-          {/* add more fields as needed */}
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form.lightingManual ?? false}
+              onChange={(e) =>
+                setForm({ ...form, lightingManual: e.target.checked })
+              }
+            />
+            Manual lighting
+          </label>
+
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Lux Low", key: "luxLow" },
+              { label: "On Hour", key: "onHour" },
+              { label: "Off Hour", key: "offHour" },
+            ].map(({ label, key }) => (
+              <label key={key}>
+                <span>{label}</span>
+                <input
+                  type="number"
+                  min={key.includes("Hour") ? 0 : undefined}
+                  max={key.includes("Hour") ? 23 : undefined}
+                  className="input mt-1"
+                  value={(form as any)[key] ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, [key]: +e.target.value })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+
           <button className="btn btn-primary" onClick={save}>
             Save
           </button>
