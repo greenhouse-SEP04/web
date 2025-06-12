@@ -1,35 +1,40 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Route, Routes, Navigate } from "react-router-dom";
+import DashboardLayout from "@/layouts/DashboardLayout";
+import LoginPage from "@/pages/LoginPage";
+import PasswordResetPage from "@/pages/PasswordResetPage";
+import DeviceListPage from "@/pages/DeviceListPage";
+import TelemetryPage from "@/pages/TelemetryPage";
+import SettingsPage from "@/pages/SettingsPage";
+import UserManagementPage from "@/pages/UserManagementPage";
+import ProfilePage from "@/pages/ProfilePage";
+import NotFoundPage from "@/pages/NotFoundPage";
+import ProtectedRoute from "@/routes/ProtectedRoute";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset" element={<PasswordResetPage />} />
 
-export default App
+      <Route element={<ProtectedRoute />}>
+        <Route element={<DashboardLayout />}>
+          <Route index element={<Navigate to="/devices" replace />} />
+          <Route path="devices" element={<DeviceListPage />} />
+          <Route path="telemetry" element={<TelemetryPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route
+            path="users"
+            element={
+              <ProtectedRoute role="admin">
+                <UserManagementPage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}
