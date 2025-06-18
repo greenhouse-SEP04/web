@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\components",
+    "\\src\\context",
+    "\\src\\data",
+    "\\src\\hooks",
+    "\\src\\layouts",
+    "\\src\\pages",
+    "\\src\\routes",
+    "\\src\\services"
+  ],
+  "SelectedNode": "\\src\\data\\mockData.ts",
+  "PreviewInSolutionExplorer": false
+}

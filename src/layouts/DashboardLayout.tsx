@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { LayoutDashboard, Settings, Monitor, Users, User } from "lucide-react";
+import { LayoutDashboard, Settings, Monitor, Users, KeyRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import clsx from "clsx";
 import { useState } from "react";
@@ -43,8 +43,12 @@ export default function DashboardLayout() {
           <NavLink to="/settings" className={linkCls}>
             <Settings className="h-5 w-5" /> Settings
           </NavLink>
-          <NavLink to="/profile" className={linkCls}>
-            <User className="h-5 w-5" /> Profile
+           <NavLink
+            to="/reset"
+            className={linkCls}
+          >
+            <KeyRound className="h-5 w-5" />
+            {user?.mustChangePwd ? "Set password" : "Change password"}
           </NavLink>
           {user?.role === "admin" && (
             <NavLink to="/users" className={linkCls}>

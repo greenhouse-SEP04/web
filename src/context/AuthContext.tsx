@@ -13,7 +13,7 @@ type AuthCtx = {
   authed: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  changePassword: (newPwd: string) => Promise<void>;
+  changePassword: (oldPwd: string | null, newPwd: string) => Promise<void>; // ✓
 };
 
 const Ctx = createContext<AuthCtx>({} as AuthCtx);
@@ -36,11 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => setUser(null);
 
-  const changePassword = async (pwd: string) => {
-    if (!user) return;
-    const updated = await mockChangePassword(user.id, pwd);
-    setUser(updated);
-  };
+  const changePassword = async (oldPwd: string | null, newPwd: string) => {
+  if (!user) return;
+  const updated = await mockChangePassword(user.id, newPwd, oldPwd);
+  setUser(updated);
+};
 
   return (
     <Ctx.Provider value={{ user, authed, login, logout, changePassword }}>

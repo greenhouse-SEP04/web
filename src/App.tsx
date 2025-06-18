@@ -7,7 +7,6 @@ import DeviceListPage from "@/pages/DeviceListPage";
 import TelemetryPage from "@/pages/TelemetryPage";
 import SettingsPage from "@/pages/SettingsPage";
 import UserManagementPage from "@/pages/UserManagementPage";
-import ProfilePage from "@/pages/ProfilePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
@@ -29,7 +28,6 @@ export default function App() {
             <Route path="devices" element={<DeviceListPage />} />
             <Route path="telemetry" element={<TelemetryPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
             <Route
               path="users"
               element={

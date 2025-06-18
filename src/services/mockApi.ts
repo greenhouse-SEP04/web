@@ -12,12 +12,29 @@ export async function mockLogin(u: string, p: string): Promise<User | null> {
   await delay(300);
   return users.find(x => x.username === u && x.password === p) ?? null;
 }
-export async function mockChangePassword(id: number, newPwd: string): Promise<User> {
+export async function mockChangePassword(
+  userId: number,
+  newPwd: string,
+  oldPwd: string | null = null   // ✓ extra arg
+): Promise<User> {
   await delay(200);
-  const usr = users.find(u => u.id === id)!;
-  usr.password = newPwd;
-  usr.firstLogin = false;
+
+  const usr = users.find(u => u.id === userId)!;
+
+  // ❗️reject if the caller did send an oldPwd and it is wrong
+  if (oldPwd !== null && usr.password !== oldPwd) {
+    throw new Error("incorrect-old-password");
+  }
+
+  usr.password   = newPwd;      // ✓ actually store the new password
+  usr.firstLogin = false;       // they have now set a real password
   return usr;
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  await delay(200);
+  const idx = users.findIndex(u => u.id === id);
+  if (idx !== -1) users.splice(idx, 1);
 }
 
 // — Users (admin)

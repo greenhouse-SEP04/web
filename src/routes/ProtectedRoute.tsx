@@ -10,8 +10,6 @@ export default function ProtectedRoute({
 }) {
   const { authed, user } = useAuth();
   if (!authed) return <Navigate to="/login" replace />;
-  if (user?.firstLogin && location.pathname !== "/reset")
-    return <Navigate to="/reset" replace />;
   if (role && user?.role !== role) return <Navigate to="/" replace />;
   return children ?? <Outlet />;
 }
