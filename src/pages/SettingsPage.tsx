@@ -35,10 +35,7 @@ export default function SettingsPage() {
     setLoadingDevices(true);
     getDevices()
       .then((all) => {
-        const visible =
-          user?.roles.includes("Admin")
-            ? all
-            : all.filter((d) => d.ownerId === user?.id);
+        const visible = user?.roles?.includes("Admin") ? all :all.filter((d) => d.ownerId === user?.id);
 
         setDevices(visible);
         if (!visible.length) return;
@@ -93,10 +90,15 @@ export default function SettingsPage() {
       return toast.error("Soil Min < Soil Max") && false;
 
     if (security?.alarmWindow) {
-      const { start, end } = security.alarmWindow;
-      const re = /^([01]\d|2[0-3]):[0-5]\d$/;
-      if (!re.test(start) || !re.test(end))
-        return toast.error("Alarm window HH:MM") && false;
+    const { start, end } = security.alarmWindow;
+
+    // either value missing → invalid
+    if (!start || !end)
+      return toast.error("Alarm window HH:MM") && false;
+
+    const re = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!re.test(start) || !re.test(end))
+      return toast.error("Alarm window HH:MM") && false;
     }
 
     return true;
@@ -194,9 +196,12 @@ export default function SettingsPage() {
                 Fertiliser hour
                 <select
                   className="input mt-1"
-                  value={form.watering?.fertHours ?? ""}
+                  value={(form.watering?.fertHours ?? "").toString()}
                   onChange={(e) =>
-                    patch("watering", { fertHours: Number(e.target.value) })
+patch("watering", {
+              fertHours:
+                e.target.value === "" ? undefined : Number(e.target.value),
+            })
                   }
                 >
                   <option value="">-- choose --</option>

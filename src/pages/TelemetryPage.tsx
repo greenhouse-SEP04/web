@@ -84,8 +84,8 @@ export default function TelemetryPage() {
   const [devSettings,    setDevSettings]    = useState<Settings | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
-  const [startDate, setStartDate]           = useState(today);
-  const [endDate,   setEndDate]             = useState(today);
+const [startDate, _setStartDate] = useState(today);
+const [endDate,   _setEndDate]   = useState(today);
   const [selectedMeasurements, setSelectedMeasurements] =
     useState<MeasurementKey[]>(["temperature"]);
 
