@@ -1,5 +1,5 @@
 // src/pages/UserManagementPage.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   listUsers   as getUsers,
   createUser,
