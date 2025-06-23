@@ -1,8 +1,8 @@
 // src/pages/DeviceListPage.tsx
 import { useEffect, useState } from "react";
 import {
-  listDevices   as getDevices,
-  listUsers     as getUsers,
+  listDevices as getDevices,
+  listUsers   as getUsers,
   assignDevice,
   deleteDevice,
   isDeviceActive,
@@ -126,47 +126,49 @@ export default function DeviceListPage() {
             {pagedDevices.map(dev => (
               <div
                 key={dev.mac}
-                className="relative cursor-pointer rounded-lg border bg-background p-4 shadow transition hover:ring-2 hover:ring-primary/50"
+                className="cursor-pointer rounded-lg border bg-background p-4 shadow transition hover:ring-2 hover:ring-primary/50"
                 onClick={() => nav(`/telemetry/${encodeURIComponent(dev.mac)}`)}
               >
-                {/* settings */}
-                <button
-                  className="absolute right-2 top-2 rounded p-1 hover:bg-muted"
-                  onClick={e => {
-                    e.stopPropagation();
-                    nav(`/settings/${encodeURIComponent(dev.mac)}`);
-                  }}
-                  aria-label="Edit settings"
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                </button>
-
-                {/* delete */}
-                {isAdmin && (
-                  <button
-                    className="absolute right-2 top-10 rounded p-1 text-red-600 hover:bg-muted"
-                    onClick={e => {
-                      e.stopPropagation();
-                      remove(dev.mac);
-                    }}
-                    aria-label="Delete device"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-
-                {/* name + status */}
-                <div className="mb-2 flex items-center justify-between pr-6">
+                {/* name + icons */}
+                <div className="mb-1 flex items-center justify-between">
                   <h2 className="font-medium">{dev.name}</h2>
-                  <span
-                    className={clsx(
-                      "text-sm font-semibold",
-                      dev.status === "online" ? "text-green-600" : "text-red-600"
-                    )}
+                  <div
+                    className="flex gap-2"
+                    onClick={e => e.stopPropagation()}
                   >
-                    {dev.status}
-                  </span>
+                    <button
+                      className="rounded p-1 hover:bg-muted"
+                      onClick={() =>
+                        nav(`/settings/${encodeURIComponent(dev.mac)}`)
+                      }
+                      aria-label="Edit settings"
+                    >
+                      <SettingsIcon className="h-4 w-4" />
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        className="rounded p-1 text-red-600 hover:bg-muted"
+                        onClick={() => remove(dev.mac)}
+                        aria-label="Delete device"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* status */}
+                <span
+                  className={clsx(
+                    "mb-2 block text-sm font-semibold",
+                    dev.status === "online"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  )}
+                >
+                  {dev.status}
+                </span>
 
                 {/* createdAt */}
                 <p className="mb-2 text-xs text-muted-foreground">
