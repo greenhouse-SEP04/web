@@ -122,11 +122,6 @@ export async function deleteDevice(mac: string) {
   await api.delete(`/device/${mac}`);
 }
 
-export async function isDeviceActive(mac: string) {
-  return (
-    await api.get<{ active: boolean }>(`/device/${mac}/active`)
-  ).data.active;
-}
 
 /* -------------------------------------------------------------------------- */
 /* 🛠️  Settings                                                              */
@@ -180,4 +175,14 @@ export async function getTelemetry(devMac: string, limit = 100) {
     params: { limit },
   });
   return res.data;
+}
+
+export interface TelemetryRangeDto {
+  first:  string | null;
+  last:   string | null;
+  online: boolean;
+}
+
+export async function getTelemetryRange(devMac: string) {
+  return (await api.get<TelemetryRangeDto>(`/telemetry/${devMac}/range`)).data;
 }

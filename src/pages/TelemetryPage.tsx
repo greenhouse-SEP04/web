@@ -2,10 +2,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  listDevices   as getDevices,
-  isDeviceActive,
+  listDevices as getDevices,
   getTelemetry,
   getSettings,
+  getTelemetryRange,
 } from "@/services/api";
 import type {
   DeviceDto    as Device,
@@ -14,7 +14,12 @@ import type {
 } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
 } from "recharts";
 import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/Pagination";
@@ -41,7 +46,7 @@ const measurementOptions: { value: MeasurementKey; label: string }[] = [
   { value: "temperature", label: "Temperature (°C)" },
   { value: "humidity",    label: "Humidity (%)"    },
   { value: "soil",        label: "Soil (%)"        },
-  { value: "lux",         label: "Lux"             }
+  { value: "lux",         label: "Lux"             },
 ];
 
 const LOW_SOIL  = 30;
@@ -71,7 +76,9 @@ interface DateInputProps {
   className?: string;
 }
 
-const DateInput = ({ label, value, onChange, min, max, className }: DateInputProps) => (
+const DateInput = ({
+  label, value, onChange, min, max, className,
+}: DateInputProps) => (
   <label className={clsx("flex flex-col text-xs gap-0.5", className)}>
     {label}
     <input
@@ -95,17 +102,16 @@ export default function TelemetryPage() {
   const selectedMac = mac ?? "";
 
   /* ───── state ───── */
-  const [devices, setDevices]           = useState<DeviceWithStatus[]>([]);
-  const [data, setData]                 = useState<Telemetry[]>([]);
-  const [devSettings, setDevSettings]   = useState<Settings | null>(null);
+  const [devices, setDevices]         = useState<DeviceWithStatus[]>([]);
+  const [data, setData]               = useState<Telemetry[]>([]);
+  const [devSettings, setDevSettings] = useState<Settings | null>(null);
   const [loadingDevices, setLoadingDev] = useState(true);
   const [loadingTel, setLoadingTel]     = useState(false);
   const [selectedMeasurements, setSelectedMeasurements] =
     useState<MeasurementKey[]>(["temperature"]);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [startDate, setStartDate] = useState(today);
-  const [endDate,   setEndDate]   = useState(today);
+  const [startDate, setStartDate] = useState("");
+  const [endDate,   setEndDate]   = useState("");
 
   /* ───── load device list + status ───── */
   useEffect(() => {
@@ -113,14 +119,14 @@ export default function TelemetryPage() {
     (async () => {
       setLoadingDev(true);
       try {
-        const all = await getDevices();
+        const base = await getDevices();
         const enriched: DeviceWithStatus[] = await Promise.all(
-          all.map(async d => {
-            const active = await isDeviceActive(d.mac);
-            return {
-              ...d,
-              status: active ? "online" as const : "offline" as const,
-            };
+          base.map(async d => {
+            let online = false;
+            try {
+              online = (await getTelemetryRange(d.mac)).online;
+            } catch { /* ignore network errors per-device */ }
+            return { ...d, status: online ? "online" : "offline" };
           })
         );
         setDevices(enriched);
@@ -139,51 +145,74 @@ export default function TelemetryPage() {
     }
   }, [selectedMac, loadingDevices, devices, navigate]);
 
-  /* ───── load telemetry + settings ───── */
+  /* ───── load telemetry + settings (+ range) ───── */
   useEffect(() => {
     if (!selectedMac) return;
     (async () => {
       setLoadingTel(true);
       try {
-        const [tel, s] = await Promise.all([
+        const [tel, s, range] = await Promise.all([
           getTelemetry(selectedMac, 1000),
           getSettings(selectedMac),
+          getTelemetryRange(selectedMac),
         ]);
+
         setData(tel);
         setDevSettings(s);
+
+        // update status of the currently-viewed device in the list
+        setDevices(ds =>
+          ds.map(d =>
+            d.mac === selectedMac
+              ? { ...d, status: range.online ? "online" : "offline" }
+              : d
+          )
+        );
+
+        // initialise the date pickers only once per device
+        if (!startDate && !endDate) {
+          const lastTelTs = tel.length ? tel[tel.length - 1].timestamp : undefined;
+          const firstTs   = range.first ?? lastTelTs ?? new Date().toISOString();
+          const lastTs    = range.online
+            ? new Date().toISOString()
+            : range.last ?? (tel.length ? tel[0].timestamp : undefined) ?? new Date().toISOString();
+
+          setStartDate(firstTs.slice(0, 10));
+          setEndDate(lastTs.slice(0, 10));
+        }
       } catch (err) {
         console.error("Failed to load telemetry/settings", err);
       } finally {
         setLoadingTel(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMac]);
 
   /* ───── derive filtered data ───── */
-  const filtered = useMemo(
-    () =>
-      data
-        .filter(d => {
-          const dt = d.timestamp.slice(0, 10);
-          return dt >= startDate && dt <= endDate;
-        })
-        .map(d => ({
-          ...d,
-          time: d.timestamp.slice(11, 19),
-          dateTime: d.timestamp.replace("T", " ").slice(0, 19),
-        })),
-    [data, startDate, endDate],
-  );
+  const filtered = useMemo(() => {
+    if (!startDate || !endDate) return [];
+    return data
+      .filter(d => {
+        const dt = d.timestamp.slice(0, 10);
+        return dt >= startDate && dt <= endDate;
+      })
+      .map(d => ({
+        ...d,
+        time: d.timestamp.slice(11, 19),
+        dateTime: d.timestamp.replace("T", " ").slice(0, 19),
+      }));
+  }, [data, startDate, endDate]);
 
   const { page, setPage, totalPages, pageData } = usePagination(filtered, 8);
-  const latest = filtered.length ? filtered[filtered.length - 1] : undefined;
-  const device = devices.find(d => d.mac === selectedMac);
+  const latest  = filtered.length ? filtered[filtered.length - 1] : undefined;
+  const device  = devices.find(d => d.mac === selectedMac);
 
   /* ───── alerts ───── */
   const alerts: string[] = [];
   if (device && device.status !== "online") alerts.push("Device is offline");
   else if (latest) {
-    if (latest.soil        < LOW_SOIL ) alerts.push("Soil moisture is low");
+    if (latest.soil < LOW_SOIL) alerts.push("Soil moisture is low");
     if (latest.temperature > HIGH_TEMP) alerts.push("Temperature is high");
   }
   const ok = alerts.length === 0 && device?.status === "online";
@@ -212,10 +241,11 @@ export default function TelemetryPage() {
         <div
           className={clsx(
             "mb-6 rounded-md p-3 text-sm",
-            ok ? "bg-green-100 text-green-700"
-               : device.status !== "online"
-               ? "bg-red-100 text-red-700"
-               : "bg-yellow-100 text-yellow-700"
+            ok
+              ? "bg-green-100 text-green-700"
+              : device.status !== "online"
+              ? "bg-red-100 text-red-700"
+              : "bg-yellow-100 text-yellow-700"
           )}
         >
           {ok ? "Everything is OK 👍" : alerts.join(" · ")}
@@ -224,7 +254,9 @@ export default function TelemetryPage() {
 
       {alarmEvents.length > 0 && (
         <div className="mb-6 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          <strong>Alarm triggered</strong> {alarmEvents.length} time{alarmEvents.length > 1 && "s"}: {alarmEvents
+          <strong>Alarm triggered</strong> {alarmEvents.length} time
+          {alarmEvents.length > 1 && "s"}:{" "}
+          {alarmEvents
             .slice(-5)
             .map(e => e.timestamp.replace("T", " ").slice(0, 19))
             .join(" · ")}
@@ -233,7 +265,7 @@ export default function TelemetryPage() {
 
       {/* ───────── toolbar ───────── */}
       <div className="mb-6 flex flex-wrap items-end gap-4">
-        {/* selector + button: select flex-grows, button natural width */}
+        {/* device selector */}
         <div className="flex items-end gap-2 w-full">
           <select
             className="input h-9 rounded border px-2 shadow-sm flex-1"
@@ -276,7 +308,7 @@ export default function TelemetryPage() {
           ))}
         </select>
 
-        {/* date range: inputs each take 50% */}
+        {/* date range */}
         <div className="flex-1 flex items-end gap-3 rounded border bg-white p-2 shadow-sm">
           <CalendarRange className="h-4 w-4 text-muted-foreground" />
           <div className="flex w-full gap-3">
@@ -360,9 +392,9 @@ export default function TelemetryPage() {
                       )}
                     >
                       {['tamper', 'motion'].includes(opt.value)
-                        ? d[opt.value] ? '⚠️' : 'OK'
+                        ? (d as any)[opt.value] ? '⚠️' : 'OK'
                         : Number(
-                            d[opt.value as Exclude<MeasurementKey, 'tamper' | 'motion'>]
+                            (d as any)[opt.value as keyof typeof d]
                           ).toFixed(2)}
                     </td>
                   ))}
