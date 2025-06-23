@@ -67,7 +67,8 @@ export async function login(username: string, password: string) {
 /* -------------------------------------------------------------------------- */
 export interface UserDto {
   id: string;
-  userName: string;          // ← match JSON’s “userName”
+  userName: string;
+  roles: string[];          // NEW – exposed by the backend
   isFirstLogin?: boolean;
 }
 
@@ -75,13 +76,15 @@ export async function listUsers() {
   return (await api.get<UserDto[]>("/users")).data;
 }
 
-export async function createUser(username: string, password: string) {
-  await api.post("/users", { username, password });
+export async function createUser(username: string,
+                                 password: string,
+                                 role: "Admin" | "User") {
+  await api.post("/users", { username, password, role });
 }
 
 export async function updateUser(
   id: string,
-  payload: { username?: string; newPassword?: string }
+  payload: { username?: string; newPassword?: string; role?: "Admin" | "User" }
 ) {
   await api.put(`/users/${id}`, payload);
 }
