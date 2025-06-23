@@ -61,6 +61,30 @@ const inWindow = (time: string, start: string, end: string) =>
     ? time >= start && time < end
     : time >= start || time < end;
 
+/* ─────────────────────── DateInput helper ─────────────────────── */
+interface DateInputProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  min?: string;
+  max?: string;
+  className?: string;
+}
+
+const DateInput = ({ label, value, onChange, min, max, className }: DateInputProps) => (
+  <label className={clsx("flex flex-col text-xs gap-0.5", className)}>
+    {label}
+    <input
+      type="date"
+      className="input h-8 rounded border px-2 shadow-sm w-full"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      min={min}
+      max={max}
+    />
+  </label>
+);
+
 /* ─────────────────────── component ─────────────────────── */
 type DeviceWithStatus = Device & { status: "online" | "offline" };
 
@@ -174,26 +198,6 @@ export default function TelemetryPage() {
     );
   }, [filtered, devSettings]);
 
-  /* DateInput helper */
-  const DateInput = ({
-    label, value, onChange, min, max,
-  }: {
-    label: string; value: string; onChange: (v: string) => void;
-    min?: string;  max?: string;
-  }) => (
-    <label className="flex flex-col text-xs gap-0.5">
-      {label}
-      <input
-        type="date"
-        className="input h-8 rounded border px-2 shadow-sm"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        min={min}
-        max={max}
-      />
-    </label>
-  );
-
   /* ───── render ───── */
   if (loadingDevices) return <Loader />;
   if (!selectedMac)   return null;
@@ -220,9 +224,7 @@ export default function TelemetryPage() {
 
       {alarmEvents.length > 0 && (
         <div className="mb-6 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          <strong>Alarm triggered</strong>{" "}
-          {alarmEvents.length} time{alarmEvents.length > 1 && "s"}:{" "}
-          {alarmEvents
+          <strong>Alarm triggered</strong> {alarmEvents.length} time{alarmEvents.length > 1 && "s"}: {alarmEvents
             .slice(-5)
             .map(e => e.timestamp.replace("T", " ").slice(0, 19))
             .join(" · ")}
@@ -231,10 +233,10 @@ export default function TelemetryPage() {
 
       {/* ───────── toolbar ───────── */}
       <div className="mb-6 flex flex-wrap items-end gap-4">
-        {/* selector + button (now full-width container) */}
-        <div className="flex items-end gap-2 flex-nowrap w-full sm:w-auto">
+        {/* selector + button: select flex-grows, button natural width */}
+        <div className="flex items-end gap-2 w-full">
           <select
-            className="input h-9 rounded border px-2 shadow-sm flex-1 sm:flex-none"
+            className="input h-9 rounded border px-2 shadow-sm flex-1"
             value={selectedMac}
             onChange={e =>
               navigate(`/telemetry/${encodeURIComponent(e.target.value)}`)
@@ -247,7 +249,7 @@ export default function TelemetryPage() {
 
           <button
             type="button"
-            className="btn btn-outline-primary flex h-9 items-center gap-1 whitespace-nowrap"
+            className="btn btn-outline-primary h-9 flex items-center gap-1 whitespace-nowrap"
             onClick={() =>
               navigate(`/settings/${encodeURIComponent(selectedMac)}`)
             }
@@ -274,12 +276,25 @@ export default function TelemetryPage() {
           ))}
         </select>
 
-        {/* date range */}
-        <div className="flex-1 flex flex-wrap items-end gap-3 rounded border bg-white p-2 shadow-sm min-w-[16rem]">
+        {/* date range: inputs each take 50% */}
+        <div className="flex-1 flex items-end gap-3 rounded border bg-white p-2 shadow-sm">
           <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          <DateInput label="From" value={startDate} onChange={setStartDate} max={endDate} />
-          <span className="text-sm">to</span>
-          <DateInput label="To"   value={endDate}   onChange={setEndDate}   min={startDate} />
+          <div className="flex w-full gap-3">
+            <DateInput
+              className="flex-1"
+              label="From"
+              value={startDate}
+              onChange={setStartDate}
+              max={endDate}
+            />
+            <DateInput
+              className="flex-1"
+              label="To"
+              value={endDate}
+              onChange={setEndDate}
+              min={startDate}
+            />
+          </div>
         </div>
       </div>
 
@@ -344,10 +359,10 @@ export default function TelemetryPage() {
                           "font-semibold bg-blue-50"
                       )}
                     >
-                      {["tamper", "motion"].includes(opt.value)
-                        ? d[opt.value] ? "⚠️" : "OK"
+                      {['tamper', 'motion'].includes(opt.value)
+                        ? d[opt.value] ? '⚠️' : 'OK'
                         : Number(
-                            d[opt.value as Exclude<MeasurementKey, "tamper" | "motion">]
+                            d[opt.value as Exclude<MeasurementKey, 'tamper' | 'motion'>]
                           ).toFixed(2)}
                     </td>
                   ))}
