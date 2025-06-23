@@ -71,7 +71,7 @@ export default function UserManagementPage() {
   /* ─────────── toggle admin/user role ─────────── */
   const toggleRole = async (u: User) => {
     try {
-      const payload = { username: u.username };
+      const payload = { username: u.userName };
       await updateUser(
         u.id,
         // backend interprets empty newPassword as no-change
@@ -87,7 +87,7 @@ export default function UserManagementPage() {
   /* ─────────── edit helpers ─────────── */
   const startEdit = (u: User) => {
     setEditingUser(u);
-    setEditForm({ username: u.username });
+    setEditForm({ username: u.userName });
   };
 
   const saveEdit = async () => {
@@ -114,7 +114,7 @@ export default function UserManagementPage() {
       toast.error("You cannot delete yourself");
       return;
     }
-    if (!window.confirm(`Delete user ${u.username}?`)) return;
+    if (!window.confirm(`Delete user ${u.userName}?`)) return;
 
     try {
       await deleteUser(u.id);
@@ -145,7 +145,7 @@ export default function UserManagementPage() {
             <tbody>
               {pagedUsers.map((u) => (
                 <tr key={u.id} className="border-b hover:bg-muted/50">
-                  <td className="p-2">{u.username}</td>
+                  <td className="p-2">{u.userName}</td>
                   <td className="p-2">
                     <div className="flex gap-2">
                       <button

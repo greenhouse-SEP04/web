@@ -64,7 +64,7 @@ export default function DashboardLayout() {
           </NavLink>
 
           {/* self-service password reset */}
-          <NavLink to="/change-password" className={linkCls}>
+          <NavLink to="/reset" className={linkCls}>
             <KeyRound className="h-5 w-5" />
             New password
           </NavLink>
@@ -80,7 +80,7 @@ export default function DashboardLayout() {
         {/* right-side profile / logout */}
         <div className="flex items-center gap-4">
           <span className="whitespace-nowrap">
-            {user?.username ?? "—"}
+            {user?.userName ?? "—"}
           </span>
           <button
             onClick={logout}

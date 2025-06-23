@@ -13,7 +13,7 @@ export const api = axios.create({
     Accept: "application/json",
     "Content-Type": "application/json",
   },
-  withCredentials: false, // switch to true if you move JWT to cookies
+  withCredentials: false,
 });
 
 /* -------------------------------------------------------------------------- */
@@ -38,7 +38,7 @@ export function logout() {
 }
 
 api.interceptors.request.use((cfg) => {
-  if (_token) cfg.headers["Authorization"] = `Bearer ${_token}`;
+  if (_token) cfg.headers!["Authorization"] = `Bearer ${_token}`;
   return cfg;
 });
 
@@ -58,7 +58,7 @@ export async function login(username: string, password: string) {
     username,
     password,
   });
-  setAuthToken(res.data.token);             // keep LS in sync
+  setAuthToken(res.data.token);
   return res.data.token;
 }
 
@@ -67,8 +67,7 @@ export async function login(username: string, password: string) {
 /* -------------------------------------------------------------------------- */
 export interface UserDto {
   id: string;
-  username: string;
-  /** backend property `IsFirstLogin` → JSON `isFirstLogin` (if camel-cased) */
+  userName: string;          // ← match JSON’s “userName”
   isFirstLogin?: boolean;
 }
 
@@ -105,6 +104,7 @@ export interface DeviceDto {
   mac: string;
   name: string;
   ownerId: string | null;
+  ownerUserName: string | null;
 }
 
 export async function listDevices() {
@@ -120,8 +120,9 @@ export async function deleteDevice(mac: string) {
 }
 
 export async function isDeviceActive(mac: string) {
-  return (await api.get<{ active: boolean }>(`/device/${mac}/active`)).data
-    .active;
+  return (
+    await api.get<{ active: boolean }>(`/device/${mac}/active`)
+  ).data.active;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -133,7 +134,7 @@ export interface SettingsDto {
     soilMin: number;
     soilMax: number;
     maxPumpSeconds: number;
-    fertHours: number;             // API expects a single int
+    fertHours: number;
   };
   lighting: {
     manual: boolean;
@@ -172,9 +173,8 @@ export interface TelemetryDto {
 }
 
 export async function getTelemetry(devMac: string, limit = 100) {
-  const res = await api.get<TelemetryDto[]>(
-    `/telemetry/${devMac}/telemetry`,
-    { params: { limit } }
-  );
+  const res = await api.get<TelemetryDto[]>(`/telemetry/${devMac}/telemetry`, {
+    params: { limit },
+  });
   return res.data;
 }

@@ -19,7 +19,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/Pagination";
 import clsx from "clsx";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";      // ← NEW
+import toast from "react-hot-toast";
 
 function Loader() {
   return (
@@ -42,35 +42,27 @@ export default function DeviceListPage() {
   const [loading,  setLoading]  = useState(true);
   const nav = useNavigate();
 
-  /* ─────── users for owner dropdown ─────── */
+  /* ─ users for owner dropdown ─ */
   useEffect(() => {
     getUsers().then(setAllUsers);
   }, []);
 
-  /* ─────── fetch devices + metadata ─────── */
+  /* ─ fetch devices + metadata ─ */
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-
     (async () => {
       try {
         const base = await getDevices();
-        const enriched = await Promise.all(
+        const enriched: DeviceWithMeta[] = await Promise.all(
           base.map(async (d): Promise<DeviceWithMeta> => {
             let active = false;
-            try {
-              active = await isDeviceActive(d.mac);
-            } catch {}
-
+            try { active = await isDeviceActive(d.mac); } catch {}
             let first: TelemetryDto | undefined;
-            try {
-              const tel = await getTelemetry(d.mac, 1);
-              first = tel[0];
-            } catch {}
-
+            try { first = (await getTelemetry(d.mac, 1))[0]; } catch {}
             return {
               ...d,
-              status: active ? "online" : "offline",
+              status: (active ? "online" : "offline") as "online" | "offline",
               createdAt: first?.timestamp,
             };
           })
@@ -84,21 +76,24 @@ export default function DeviceListPage() {
     })();
   }, [user]);
 
-  /* ─────── pagination helper ─────── */
-  const {
-    page,
-    setPage,
-    totalPages,
-    pageData: pagedDevices,
-  } = usePagination(devices, 6);
+  /* ─ pagination ─ */
+  const { page, setPage, totalPages, pageData: pagedDevices } =
+    usePagination(devices, 6);
 
-  /* ─────── owner change handler ─────── */
+  /* ─ owner change handler ─ */
   const onOwnerChange = async (dev: DeviceWithMeta, userId: string | "") => {
     try {
       await assignDevice(dev.mac, userId);
-      setDevices((ds) =>
-        ds.map((d) =>
-          d.mac === dev.mac ? { ...d, ownerId: userId || null } : d
+      setDevices(ds =>
+        ds.map(d =>
+          d.mac === dev.mac
+            ? {
+                ...d,
+                ownerId: userId || null,
+                ownerUserName:
+                  allUsers.find(u => u.id === userId)?.userName ?? null,
+              }
+            : d
         )
       );
       toast.success("Owner updated");
@@ -107,19 +102,18 @@ export default function DeviceListPage() {
     }
   };
 
-  /* ─────── delete handler ─────── */
+  /* ─ delete handler ─ */
   const remove = async (mac: string) => {
     if (!window.confirm("Delete this device?")) return;
     try {
       await deleteDevice(mac);
-      setDevices((ds) => ds.filter((d) => d.mac !== mac));
+      setDevices(ds => ds.filter(d => d.mac !== mac));
       toast.success("Device deleted");
     } catch {
       toast.error("Failed to delete device");
     }
   };
 
-  /* ─────────────── UI ─────────────── */
   return (
     <div>
       <h1 className="text-xl font-semibold mb-4">Devices</h1>
@@ -129,29 +123,29 @@ export default function DeviceListPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
-            {pagedDevices.map((dev) => (
+            {pagedDevices.map(dev => (
               <div
                 key={dev.mac}
                 className="relative cursor-pointer rounded-lg border bg-background p-4 shadow transition hover:ring-2 hover:ring-primary/50"
-                onClick={() => nav(`/telemetry?mac=${dev.mac}`)}
+                onClick={() => nav(`/telemetry/${encodeURIComponent(dev.mac)}`)}
               >
-                {/* settings button */}
+                {/* settings */}
                 <button
                   className="absolute right-2 top-2 rounded p-1 hover:bg-muted"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
-                    nav(`/settings?mac=${dev.mac}`);
+                    nav(`/settings/${encodeURIComponent(dev.mac)}`);
                   }}
                   aria-label="Edit settings"
                 >
                   <SettingsIcon className="h-4 w-4" />
                 </button>
 
-                {/* delete button (admin only) */}
+                {/* delete */}
                 {isAdmin && (
                   <button
                     className="absolute right-2 top-10 rounded p-1 text-red-600 hover:bg-muted"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       remove(dev.mac);
                     }}
@@ -183,27 +177,22 @@ export default function DeviceListPage() {
                 </p>
 
                 {/* owner selector / name */}
-                <div onClick={(e) => e.stopPropagation()}>
+                <div onClick={e => e.stopPropagation()}>
                   {isAdmin ? (
                     <select
                       className="input w-full"
                       value={dev.ownerId ?? ""}
-                      onChange={(e) => onOwnerChange(dev, e.target.value)}
+                      onChange={e => onOwnerChange(dev, e.target.value)}
                     >
                       <option value="">Unassigned</option>
-                      {allUsers.map((u) => (
+                      {allUsers.map(u => (
                         <option key={u.id} value={u.id}>
-                          {u.username}
+                          {u.userName}
                         </option>
                       ))}
                     </select>
                   ) : (
-                    <p className="text-sm">
-                      {
-                        allUsers.find((u) => u.id === dev.ownerId)
-                          ?.username ?? "-"
-                      }
-                    </p>
+                    <p className="text-sm">{dev.ownerUserName ?? "-"}</p>
                   )}
                 </div>
               </div>

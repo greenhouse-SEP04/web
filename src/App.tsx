@@ -17,21 +17,31 @@ export default function App() {
       {/* Toast container */}
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
-      {/* Your route tree */}
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset" element={<PasswordResetPage />} />
 
+        {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
+            {/* Redirect “/” to “/devices” */}
             <Route index element={<Navigate to="/devices" replace />} />
+
+            {/* Device list */}
             <Route path="devices" element={<DeviceListPage />} />
-            <Route path="telemetry" element={<TelemetryPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+
+            {/* Telemetry with optional :mac; will auto-redirect to first if missing */}
+            <Route path="telemetry/:mac?" element={<TelemetryPage />} />
+
+            {/* Settings with optional :mac; will auto-redirect to first if missing */}
+            <Route path="settings/:mac?" element={<SettingsPage />} />
+
+            {/* User management (Admin only) */}
             <Route
               path="users"
               element={
-                <ProtectedRoute role="admin">
+                <ProtectedRoute role="Admin">
                   <UserManagementPage />
                 </ProtectedRoute>
               }
@@ -39,6 +49,7 @@ export default function App() {
           </Route>
         </Route>
 
+        {/* 404 catch-all */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>

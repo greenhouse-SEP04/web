@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const me: AuthUser = {
           id: claims.sub,
-          username: claims.unique_name || claims.name || "",
+          userName: claims.unique_name || claims.name || "",
           isFirstLogin: false,  // unknown until we hit the API
           roles,
         };
@@ -109,13 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let profile: UserDto | undefined;
       if (roles.includes("Admin")) {
         profile = (await listUsers()).find(
-          (u) => u.id === sub || u.username === username
+          (u) => u.id === sub || u.userName === username
         );
       }
 
       const me: AuthUser = {
         id: sub,
-        username: profile?.username ?? username,
+        userName: profile?.userName ?? username,
         isFirstLogin: profile?.isFirstLogin ?? false,
         roles,
       };
