@@ -39,14 +39,18 @@ type MeasurementKey =
   | "humidity"
   | "soil"
   | "lux"
-  | "motion"
-  | "tamper";
+  | "level"          // 🆕 water-level numeric
+  | "motionFlag"     // 🆕 numeric spike (0/1)
+  | "tamperFlag";    // 🆕
 
 const measurementOptions: { value: MeasurementKey; label: string }[] = [
   { value: "temperature", label: "Temperature (°C)" },
   { value: "humidity",    label: "Humidity (%)"    },
   { value: "soil",        label: "Soil (%)"        },
   { value: "lux",         label: "Lux"             },
+  { value: "level",       label: "Water level (%)" }, // 🆕
+  { value: "motionFlag",  label: "Motion"          }, // 🆕
+  { value: "tamperFlag",  label: "Tamper"          }, // 🆕
 ];
 
 const LOW_SOIL  = 30;
@@ -201,6 +205,9 @@ export default function TelemetryPage() {
         ...d,
         time: d.timestamp.slice(11, 19),
         dateTime: d.timestamp.replace("T", " ").slice(0, 19),
+
+        motionFlag: d.motion ? 1 : 0,   // 🆕 numeric flags
+        tamperFlag: d.tamper ? 1 : 0,   // 🆕
       }));
   }, [data, startDate, endDate]);
 
@@ -336,7 +343,14 @@ export default function TelemetryPage() {
           <LineChart width={900} height={320} data={filtered}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="time" />
-            <YAxis />
+            <YAxis yAxisId="main" />
+            {/* separate axis for 0/1 flags */}
+            <YAxis
+              yAxisId="flags"
+              orientation="right"
+              domain={[0, 1]}
+              tickFormatter={(v) => (v ? "On" : "Off")}
+            />
             <Tooltip
               labelFormatter={label =>
                 `Time: ${label}, Timestamp: ${
@@ -347,9 +361,11 @@ export default function TelemetryPage() {
             {selectedMeasurements.map(m => (
               <Line
                 key={m}
-                type="monotone"
+                type={["motionFlag", "tamperFlag"].includes(m) ? "stepAfter" : "monotone"}
                 dataKey={m}
                 dot={false}
+                yAxisId={["motionFlag", "tamperFlag"].includes(m) ? "flags" : "main"}
+                strokeDasharray={["motionFlag", "tamperFlag"].includes(m) ? "5 5" : undefined}
                 name={measurementOptions.find(o => o.value === m)?.label}
               />
             ))}
@@ -391,8 +407,10 @@ export default function TelemetryPage() {
                           "font-semibold bg-blue-50"
                       )}
                     >
-                      {['tamper', 'motion'].includes(opt.value)
-                        ? (d as any)[opt.value] ? '⚠️' : 'OK'
+                      {['motionFlag', 'tamperFlag'].includes(opt.value)
+                        ? (opt.value === 'motionFlag' ? d.motion : d.tamper)
+                            ? '⚠️'
+                            : 'OK'
                         : Number(
                             (d as any)[opt.value as keyof typeof d]
                           ).toFixed(2)}
