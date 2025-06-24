@@ -25,13 +25,8 @@ import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/Pagination";
 import clsx from "clsx";
 import { Settings as SettingsIcon, CalendarRange } from "lucide-react";
+import Loader from "@/components/Loader";
 
-/* ─────────────────────── Loader ─────────────────────── */
-const Loader = () => (
-  <div className="flex justify-center py-8">
-    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-  </div>
-);
 
 /* ─────────────────────── constants ─────────────────────── */
 /**

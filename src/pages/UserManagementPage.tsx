@@ -13,14 +13,8 @@ import { Pagination } from "@/components/Pagination";
 import { useAuth } from "@/context/AuthContext";
 import { Trash2, Edit2, UserPlus, RotateCw } from "lucide-react";
 
-/* ─────────── tiny spinner ─────────── */
-function Loader() {
-  return (
-    <div className="flex justify-center py-8">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-    </div>
-  );
-}
+import Loader from "@/components/Loader";
+
 
 export default function UserManagementPage() {
   const { user: current } = useAuth();

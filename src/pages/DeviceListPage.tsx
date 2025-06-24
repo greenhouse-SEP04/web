@@ -16,16 +16,12 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/Pagination";
+import Loader from "@/components/Loader";
+
 import clsx from "clsx";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
-/* ───────────────────── Loader ───────────────────── */
-const Loader = () => (
-  <div className="flex justify-center py-8">
-    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-  </div>
-);
 
 /* ───────────────────── Types ───────────────────── */
 interface DeviceWithMeta extends Device {

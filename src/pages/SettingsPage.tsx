@@ -11,17 +11,11 @@ import type {
 } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
+import Loader from "@/components/Loader";
 
 type DeepPartial<T> = { [K in keyof T]?: DeepPartial<T[K]> };
 type SettingsForm   = DeepPartial<Settings>;
 
-function Loader() {
-  return (
-    <div className="flex justify-center py-8">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { user } = useAuth();
