@@ -26,6 +26,8 @@ import { Pagination } from "@/components/Pagination";
 import clsx from "clsx";
 import { Settings as SettingsIcon, CalendarRange } from "lucide-react";
 import Loader from "@/components/Loader";
+/* ─────────────────────── helpers ─────────────────────── */
+import { waterIcon, inWindow } from '@/utils/telemetry';
 
 
 /* ─────────────────────── constants ─────────────────────── */
@@ -77,19 +79,7 @@ const colourMap: Record<MeasurementKey, { hdr: string; cell: string; stroke: str
 const LOW_SOIL  = 30;
 const HIGH_TEMP = 30;
 
-/* ─────────────────────── helpers ─────────────────────── */
-const waterIcon = (lvl: number) =>
-  lvl >= 70 ? "💧💧💧"
-: lvl >= 40 ? "💧💧"
-: lvl >= 10 ? "💧"
-:             "—";
 
-const inWindow = (time: string, start: string, end: string) =>
-  start === end
-    ? true
-    : start < end
-    ? time >= start && time < end
-    : time >= start || time < end;
 
 /* ─────────────────────── DateInput helper ─────────────────────── */
 interface DateInputProps {
