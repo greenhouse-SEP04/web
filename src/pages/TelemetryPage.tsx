@@ -34,24 +34,50 @@ const Loader = () => (
 );
 
 /* ─────────────────────── constants ─────────────────────── */
-type MeasurementKey =
+/**
+ * NOTE: we added a dedicated `tamper` key (boolean rendered as 0/1) so we can
+ *  keep the column in the table while still letting the chart treat it as a
+ *  numeric spike, just like `motionFlag`.
+ */
+export type MeasurementKey =
   | "temperature"
   | "humidity"
   | "soil"
   | "lux"
-  | "level"          // 🆕 water-level numeric
-  | "motionFlag"     // 🆕 numeric spike (0/1)
-  | "tamperFlag";    // 🆕
+  | "level"          // water-level numeric
+  | "motionFlag"     // numeric spike (0/1)
+  | "tamper"         // boolean → numeric 0/1
+  | "accelX"
+  | "accelY"
+  | "accelZ";
 
-const measurementOptions: { value: MeasurementKey; label: string }[] = [
+/* friendly labels */
+export const measurementOptions: { value: MeasurementKey; label: string }[] = [
   { value: "temperature", label: "Temperature (°C)" },
   { value: "humidity",    label: "Humidity (%)"    },
   { value: "soil",        label: "Soil (%)"        },
   { value: "lux",         label: "Lux"             },
-  { value: "level",       label: "Water level (%)" }, // 🆕
-  { value: "motionFlag",  label: "Motion"          }, // 🆕
-  { value: "tamperFlag",  label: "Tamper"          }, // 🆕
+  { value: "level",       label: "Water level (%)" },
+  { value: "motionFlag",  label: "Motion"          },
+  { value: "tamper",      label: "Tamper"          },
+  { value: "accelX",      label: "Tamper X (g)"    },
+  { value: "accelY",      label: "Tamper Y (g)"    },
+  { value: "accelZ",      label: "Tamper Z (g)"    },
 ];
+
+/* colour palette used for header/cell highlights + line strokes  */
+const colourMap: Record<MeasurementKey, { hdr: string; cell: string; stroke: string }> = {
+  temperature: { hdr: "bg-red-100",   cell: "bg-red-50",   stroke: "#ef4444" },
+  humidity:    { hdr: "bg-blue-100",  cell: "bg-blue-50",  stroke: "#3b82f6" },
+  soil:        { hdr: "bg-green-100", cell: "bg-green-50", stroke: "#10b981" },
+  lux:         { hdr: "bg-yellow-100",cell: "bg-yellow-50",stroke: "#eab308" },
+  level:       { hdr: "bg-cyan-100",  cell: "bg-cyan-50", stroke: "#06b6d4" },
+  motionFlag:  { hdr: "bg-purple-100",cell: "bg-purple-50",stroke: "#a855f7" },
+  tamper:      { hdr: "bg-rose-100",  cell: "bg-rose-50", stroke: "#f43f5e" },
+  accelX:      { hdr: "bg-amber-100", cell: "bg-amber-50",stroke: "#f59e0b" },
+  accelY:      { hdr: "bg-lime-100",  cell: "bg-lime-50", stroke: "#84cc16" },
+  accelZ:      { hdr: "bg-pink-100",  cell: "bg-pink-50", stroke: "#ec4899" },
+};
 
 const LOW_SOIL  = 30;
 const HIGH_TEMP = 30;
@@ -203,11 +229,11 @@ export default function TelemetryPage() {
       })
       .map(d => ({
         ...d,
-        time: d.timestamp.slice(11, 19),
+        time    : d.timestamp.slice(11, 19),
         dateTime: d.timestamp.replace("T", " ").slice(0, 19),
 
-        motionFlag: d.motion ? 1 : 0,   // 🆕 numeric flags
-        tamperFlag: d.tamper ? 1 : 0,   // 🆕
+        motionFlag: d.motion ? 1 : 0,
+        tamper   : d.tamper ? 1 : 0, // numeric for chart
       }));
   }, [data, startDate, endDate]);
 
@@ -262,7 +288,7 @@ export default function TelemetryPage() {
       {alarmEvents.length > 0 && (
         <div className="mb-6 rounded-md bg-red-50 p-3 text-sm text-red-700">
           <strong>Alarm triggered</strong> {alarmEvents.length} time
-          {alarmEvents.length > 1 && "s"}:{" "}
+          {alarmEvents.length > 1 && "s"}: {" "}
           {alarmEvents
             .slice(-5)
             .map(e => e.timestamp.replace("T", " ").slice(0, 19))
@@ -361,11 +387,12 @@ export default function TelemetryPage() {
             {selectedMeasurements.map(m => (
               <Line
                 key={m}
-                type={["motionFlag", "tamperFlag"].includes(m) ? "stepAfter" : "monotone"}
+                type={["motionFlag", "tamper"].includes(m) ? "stepAfter" : "monotone"}
                 dataKey={m}
                 dot={false}
-                yAxisId={["motionFlag", "tamperFlag"].includes(m) ? "flags" : "main"}
-                strokeDasharray={["motionFlag", "tamperFlag"].includes(m) ? "5 5" : undefined}
+                yAxisId={["motionFlag", "tamper"].includes(m) ? "flags" : "main"}
+                strokeDasharray={["motionFlag", "tamper"].includes(m) ? "5 5" : undefined}
+                stroke={colourMap[m].stroke}
                 name={measurementOptions.find(o => o.value === m)?.label}
               />
             ))}
@@ -385,7 +412,7 @@ export default function TelemetryPage() {
                     key={opt.value}
                     className={clsx(
                       "p-2",
-                      selectedMeasurements.includes(opt.value) && "bg-blue-100"
+                      selectedMeasurements.includes(opt.value) && colourMap[opt.value].hdr
                     )}
                   >
                     {opt.label}
@@ -398,24 +425,25 @@ export default function TelemetryPage() {
               {pageData.map(d => (
                 <tr key={d.timestamp} className="border-t">
                   <td className="p-2 font-mono whitespace-nowrap">{d.dateTime}</td>
-                  {measurementOptions.map(opt => (
-                    <td
-                      key={opt.value}
-                      className={clsx(
-                        "p-2 text-center",
-                        selectedMeasurements.includes(opt.value) &&
-                          "font-semibold bg-blue-50"
-                      )}
-                    >
-                      {['motionFlag', 'tamperFlag'].includes(opt.value)
-                        ? (opt.value === 'motionFlag' ? d.motion : d.tamper)
-                            ? '⚠️'
-                            : 'OK'
-                        : Number(
-                            (d as any)[opt.value as keyof typeof d]
-                          ).toFixed(2)}
-                    </td>
-                  ))}
+                  {measurementOptions.map(opt => {
+                    const isMotion = opt.value === "motionFlag" && d.motion;
+                    const isTamper = opt.value === "tamper" && d.tamper;
+                    return (
+                      <td
+                        key={opt.value}
+                        className={clsx(
+                          "p-2 text-center",
+                          selectedMeasurements.includes(opt.value) && colourMap[opt.value].cell,
+                          (isMotion || isTamper) && "bg-red-200 text-red-800 font-semibold"
+                        )}
+                      >
+                        {["motionFlag", "tamper"].includes(opt.value)
+                          ? (opt.value === "motionFlag" ? d.motion : d.tamper)
+                              ? "⚠️" : "OK"
+                          : Number((d as any)[opt.value as keyof typeof d]).toFixed(2)}
+                      </td>
+                    );
+                  })}
                   <td className="p-2 text-center">{waterIcon(d.level)}</td>
                 </tr>
               ))}

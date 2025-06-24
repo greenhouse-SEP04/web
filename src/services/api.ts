@@ -159,16 +159,23 @@ export async function updateSettings(devMac: string, dto: SettingsDto) {
 /* -------------------------------------------------------------------------- */
 /* 📈  Telemetry                                                              */
 /* -------------------------------------------------------------------------- */
+/* Telemetry -----------------------------------------------------------------*/
 export interface TelemetryDto {
-  timestamp: string;
+  timestamp  : string;
   temperature: number;
-  humidity: number;
-  soil: number;
-  lux: number;
-  level: number;
-  motion: boolean;
-  tamper: boolean;
+  humidity   : number;
+  soil       : number;
+  lux        : number;
+  level      : number;
+  motion     : boolean;
+  tamper     : boolean;
+
+  /** 🆕 axes sent by the device – raw counts or milli-g, whatever the MCU pushes */
+  accelX     : number;
+  accelY     : number;
+  accelZ     : number;
 }
+
 
 export async function getTelemetry(devMac: string, limit = 100) {
   const res = await api.get<TelemetryDto[]>(`/telemetry/${devMac}/telemetry`, {
