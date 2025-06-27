@@ -21,3 +21,8 @@ describe("<Pagination>", () => {
     expect(getByText("Page 1 / 3")).toBeInTheDocument();
   });
 });
+
+it('disables next on last page', () => {
+  const { getByRole } = render(<Pagination page={3} totalPages={3} onPageChange={() => {}} />);
+  expect(getByRole('button', { name: /next page/i })).toBeDisabled();
+});
