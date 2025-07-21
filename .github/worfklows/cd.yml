@@ -1,48 +1,52 @@
-name: Web CI/CD
+name: Build & Push Web Docker Image
 
 on:
   push:
     branches:
       - main
 
-env:
-  ECR_REPOSITORY: greenhouse-web
+permissions:
+  contents: read
 
 jobs:
-  build_and_deploy:
-    name: Build & Deploy Web App
+  build-and-push:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ${{ secrets.AWS_REGION }}
+          aws-region:            eu-central-1
 
-      - name: Log in to ECR
+      - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build & Push Docker Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+      - name: Build, tag, and push Docker image
+        env:
+          ECR_REGISTRY:   ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: greenhouse-web
+          IMAGE_TAG:      ${{ github.sha }}
+        run: |
+          # build with your build-arg for VITE_API_BASE_URL
+          docker build \
+            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -f Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      - name: (Optional) Deploy to ECS
+        if: always()
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          aws-region:          ${{ secrets.AWS_REGION }}
-          task-definition:     path/to/your/ecs-task-def.json
-          service:             greenhouse-web
-          cluster:             greenhouse-cluster
+          service:           greenhouse-web
+          cluster:           greenhouse-cluster
+          task-definition:   path/to/your/web-task-def.json
+          container-image:   $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           wait-for-service-stability: true
