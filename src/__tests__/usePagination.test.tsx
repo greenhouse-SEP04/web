@@ -1,5 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { usePagination } from "@/hooks/usePagination";
+import { expect, it } from "vitest";
 
 it("computes pages, handles navigation and resets when list changes", () => {
   // initial list of 5 items, 2 rows per page → 3 pages

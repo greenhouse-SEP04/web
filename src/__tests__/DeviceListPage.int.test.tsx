@@ -3,7 +3,7 @@ import { setupServer } from "msw/node";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DeviceListPage from "@/pages/DeviceListPage";
-import { vi } from "vitest";
+import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 
 /* ───────────────────────── MSW handlers ───────────────────────── */
 const devices = [

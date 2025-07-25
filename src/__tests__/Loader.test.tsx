@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import Loader from "@/components/Loader";
+import { expect, it } from "vitest";
 
 it("applies correct Tailwind size classes", () => {
   const { getByTestId } = render(<Loader size={10} />);

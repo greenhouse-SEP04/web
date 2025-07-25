@@ -1,5 +1,5 @@
 import { render, fireEvent } from "@testing-library/react";
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Pagination } from "@/components/Pagination";
 
 describe("<Pagination>", () => {

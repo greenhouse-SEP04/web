@@ -1,5 +1,5 @@
 import { render, fireEvent, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { expect, it, vi } from "vitest";
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { MemoryRouter } from 'react-router-dom';
 

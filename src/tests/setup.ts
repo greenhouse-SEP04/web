@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import {  vi } from "vitest";
 
 // ⇢ Mock the toast lib once for all tests
 vi.mock("react-hot-toast", () => ({
@@ -7,7 +8,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 // ⇢ Silence React-Router warnings when using MemoryRouter
-vi.mock("react-router-dom", async (orig) => {
+vi.mock("react-router-dom", async (orig: () => Promise<Record<string, unknown>>) => {
   const mod = await orig();
   return { ...mod, usePrompt: () => {} };
 });

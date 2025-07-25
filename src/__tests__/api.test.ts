@@ -4,7 +4,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
    axios stub – declared *before* the vi.mock factory to avoid TDZ
 --------------------------------------------------------------------------- */
 const axiosStub = {
-  defaults: { headers: { common: {} } },
+  defaults: {
+    headers: {
+      common: {} as Record<string, string>,
+    },
+  },
   post: vi.fn(),
   get : vi.fn(),
 };
@@ -20,7 +24,6 @@ vi.mock("axios", () => ({
    real imports that depend on axios
 --------------------------------------------------------------------------- */
 import {
-  api,
   setAuthToken,
   bootstrapAuth,
   login,

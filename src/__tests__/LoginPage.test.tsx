@@ -1,6 +1,6 @@
 import { render, fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { vi } from 'vitest';
+import { expect, it, vi } from "vitest";
 import LoginPage from '@/pages/LoginPage';
 
 const loginMock = vi.fn();

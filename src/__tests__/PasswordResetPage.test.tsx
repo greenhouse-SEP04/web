@@ -1,6 +1,6 @@
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { vi } from 'vitest';
+import { expect, it, vi } from "vitest";
 import PasswordResetPage from '@/pages/PasswordResetPage';
 
 const changePwd = vi.fn().mockResolvedValue(undefined);

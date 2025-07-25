@@ -2,6 +2,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
+import { expect, it } from "vitest";
 
 const renderWithAuth = (ui: React.ReactElement, initial = "/") =>
   render(

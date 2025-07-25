@@ -1,7 +1,7 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import ProtectedRoute from '@/routes/ProtectedRoute';
-import { vi } from 'vitest';
+import { expect, it, vi } from "vitest";
 
 vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ authed: false, user: null }),

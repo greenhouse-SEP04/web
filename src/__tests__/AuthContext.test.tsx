@@ -1,5 +1,5 @@
 // AuthContext.test.tsx
-import { vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
