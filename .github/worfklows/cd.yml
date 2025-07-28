@@ -1,15 +1,16 @@
-name: Build & Push Web Docker Image
+name: Deploy Web (S3 + CloudFront)
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-and-push:
+  deploy-static-site:
     runs-on: ubuntu-latest
     environment: production
 
@@ -22,31 +23,24 @@ jobs:
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            eu-central-1
+          aws-region:            us-east-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build, tag, and push Docker image
-        env:
-          ECR_REGISTRY:   ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: greenhouse-web
-          IMAGE_TAG:      ${{ github.sha }}
+      - name: Install dependencies & build
         run: |
-          # build with your build-arg for VITE_API_BASE_URL
-          docker build \
-            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            -f Dockerfile .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
 
-      - name: (Optional) Deploy to ECS
-        if: always()
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          service:           greenhouse-web
-          cluster:           greenhouse-cluster
-          task-definition:   path/to/your/web-task-def.json
-          container-image:   $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          wait-for-service-stability: true
+      - name: Sync build to S3
+        env:
+          SITE_BUCKET: ${{ secrets.SITE_BUCKET_NAME }}
+        run: |
+          aws s3 sync dist/ s3://$SITE_BUCKET/ --delete
+
+      - name: Invalidate CloudFront cache
+        env:
+          DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*"
