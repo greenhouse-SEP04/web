@@ -9,46 +9,41 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     strategy:
-      matrix:
-        node: [20]
+      matrix: { node: [20] }
 
     defaults:
       run:
-        working-directory: web          # <── all commands run inside /web
+        working-directory: web
 
     steps:
-      # ── 1. checkout code ─────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. install Node + enable pnpm cache ──────────────────────────
+      # Install pnpm first so setup-node's cache=pnpm can query it
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
       - name: Set up Node ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
+          # make sure the lockfile path matches your defaults.run dir
+          cache-dependency-path: web/pnpm-lock.yaml
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          run_install: false            # we'll run install next
-
-      # ── 3. install deps (honours pnpm-lock.yaml) ─────────────────────
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ── 4. lint (optional) ───────────────────────────────────────────
       - name: Run ESLint
         run: pnpm lint
 
-      # ── 5. run tests + coverage ──────────────────────────────────────
       - name: Run Vitest with coverage
         run: pnpm vitest run --coverage
 
-      # ── 6. upload HTML coverage report ───────────────────────────────
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,7 +52,6 @@ jobs:
           path: web/coverage
           if-no-files-found: warn
 
-      # ── 7. add simple coverage summary on PR (optional) ──────────────
       - name: Add coverage summary to PR
         if: success() && github.event_name == 'pull_request'
         run: |
