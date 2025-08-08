@@ -1,33 +1,25 @@
+// src/__tests__/api.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-/* --------------------------------------------------------------------------
-   axios stub – declared *before* the vi.mock factory to avoid TDZ
---------------------------------------------------------------------------- */
-const axiosStub = {
-  defaults: {
-    headers: {
-      common: {} as Record<string, string>,
-    },
-  },
+/* ---------- HOISTED STUB (prevents TDZ) ---------- */
+const axiosStub = vi.hoisted(() => ({
+  defaults: { headers: { common: {} as Record<string, string> } },
   post: vi.fn(),
   get : vi.fn(),
-  // 👇 add this so api.ts can call api.interceptors.request/response.use(...)
   interceptors: {
-    request: { use: vi.fn() },
+    request : { use: vi.fn() },
     response: { use: vi.fn() },
   },
-};
+}));
 
 vi.mock("axios", () => ({
   default: {
-    create      : () => axiosStub,   // returns the stub, never touches outer TDZ
+    create      : () => axiosStub,  // safe now
     isAxiosError: () => false,
   },
 }));
 
-/* --------------------------------------------------------------------------
-   real imports that depend on axios
---------------------------------------------------------------------------- */
+/* ---------- now import things that use axios ---------- */
 import {
   setAuthToken,
   bootstrapAuth,
@@ -35,9 +27,7 @@ import {
   listDevices,
 } from "@/services/api";
 
-/* --------------------------------------------------------------------------
-   tests
---------------------------------------------------------------------------- */
+/* ---------- tests ---------- */
 describe("token helpers", () => {
   beforeEach(() => {
     axiosStub.defaults.headers.common = {};
@@ -64,7 +54,6 @@ describe("login / device list", () => {
     axiosStub.defaults.headers.common = {};
     localStorage.clear();
   });
-
   afterEach(() => vi.resetAllMocks());
 
   it("persists token after login", async () => {

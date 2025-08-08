@@ -120,16 +120,17 @@ export interface DeviceDto {
   ownerUserName: string | null;
 }
 
-export async function listDevices() {
+async function retryOnceOn401<T>(fn: () => Promise<T>): Promise<T> {
   try {
-    return (await api.get<DeviceDto[]>("/device")).data;
-  } catch (e: any) {
-    // satisfy the test: retry once on 401
-    if (e?.response?.status === 401) {
-      return (await api.get<DeviceDto[]>("/device")).data;
-    }
-    throw e;
+    return await fn();
+  } catch (err: any) {
+    if (err?.response?.status === 401) return await fn();
+    throw err;
   }
+}
+
+export async function listDevices() {
+  return retryOnceOn401(async () => (await api.get<DeviceDto[]>("/device")).data);
 }
 
 export async function assignDevice(mac: string, userId: string) {

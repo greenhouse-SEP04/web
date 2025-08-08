@@ -1,48 +1,65 @@
-// D:\source\SEP04_greenhouse\web\src\__tests__\SettingsPage.test.tsx
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+// src/__tests__/SettingsPage.test.tsx
+import { render, screen, fireEvent, waitFor, waitForElementToBeRemoved } 
+  from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// stub the service-layer to match the new component
-const updateSettingsMock = vi.fn();
+/* hoisted fn so vi.mock can reference it safely */
+const updateSettingsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/services/api", () => ({
-  listDevices: vi.fn().mockResolvedValue([
-    { mac: "AA:BB:CC", name: "Greenhouse 1", ownerId: null, ownerUserName: null },
-  ]),
+  listDevices: vi.fn().mockResolvedValue([{ mac: "AA:BB:CC", name: "Greenhouse 1" }]),
   getSettings: vi.fn().mockResolvedValue({
     watering: { manual: false, soilMin: 40, soilMax: 60 },
-    vent:     { manual: false, humLo: 45, humHi: 60 },
+    vent    : { manual: false, humLo: 45, humHi: 60 },
     security: { armed: false, alarmWindow: { start: "22:00", end: "06:00" } },
   }),
   updateSettings: updateSettingsMock,
 }));
 
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({
+    authed: true,
+    user: { id: "1", userName: "admin", roles: ["Admin"] },
+    login: vi.fn(),
+    logout: vi.fn(),
+    changePassword: vi.fn(),
+  }),
+}));
+
 import SettingsPage from "@/pages/SettingsPage";
 
-const renderWithRouter = () =>
+const renderAt = (path: string) =>
   render(
-    <MemoryRouter initialEntries={["/settings/AA:BB:CC"]}>
-      <SettingsPage />
-    </MemoryRouter>,
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/settings/:mac" element={<SettingsPage />} />
+      </Routes>
+    </MemoryRouter>
   );
 
 describe("<SettingsPage>", () => {
   beforeEach(() => updateSettingsMock.mockClear());
 
-  it("blocks save when Soil Min is out of range", async () => {
-    renderWithRouter();
+  it("blocks save when humidity low is out of range", async () => {
+    renderAt("/settings/AA%3ABB%3ACC");
 
-    // wait for settings to load
-    const soilMin = await screen.findByLabelText(/soil min/i);
+    // Wait for the full-page loader to go away (devices fetch)
+    await waitForElementToBeRemoved(() => screen.getByTestId("loader"), { timeout: 3000 });
 
-    // set an invalid value (below 20)
-    fireEvent.change(soilMin, { target: { value: "10" } });
+    // Now settings spinner may render – if so, wait for that one too
+    // (wrapped in try so we don't fail if it's already gone)
+    try {
+      await waitForElementToBeRemoved(() => screen.getByTestId("loader"), { timeout: 3000 });
+    } catch {}
 
-    // attempt save
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    // Grab the input via its <label> text
+    const humLo = await screen.findByLabelText(/low humidity/i);
+    fireEvent.change(humLo, { target: { value: "30" } }); // invalid (<35)
 
-    // expect the API not to be called due to validation failure
+    const saveBtn = await screen.findByRole("button", { name: /save/i });
+    fireEvent.click(saveBtn);
+
     await waitFor(() => {
       expect(updateSettingsMock).not.toHaveBeenCalled();
     });
