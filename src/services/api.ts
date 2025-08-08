@@ -126,30 +126,46 @@ export async function deleteDevice(mac: string) {
 /* -------------------------------------------------------------------------- */
 /* 🛠️  Settings                                                              */
 /* -------------------------------------------------------------------------- */
-export interface SettingsDto {
-  watering: {
-    manual: boolean;
-    soilMin: number;
-    soilMax: number;
-    maxPumpSeconds: number;
-    fertHours: number;
-  };
-  lighting: {
-    manual: boolean;
-    luxLow: number;
-    onHour: number;
-    offHour: number;
-  };
-  security: {
-    armed: boolean;
-    alarmWindow: { start: string; end: string };
-  };
+export interface WateringDto {
+  manual: boolean;
+  soilMin: number; // 20–60
+  soilMax: number; // 40–80
 }
 
-export async function getSettings(devMac: string) {
-  return (
-    await api.get<SettingsDto>("/settings", { params: { dev: devMac } })
-  ).data;
+export interface VentDto {
+  manual: boolean;
+  humLo: number; // 35–55
+  humHi: number; // 45–70
+}
+
+export interface SecurityDto {
+  armed: boolean;
+  alarmWindow: { start: string; end: string }; // "HH:MM"
+}
+
+/** Payload used for PUT /settings (matches backend SettingsDto) */
+export interface SettingsDto {
+  watering: WateringDto;
+  vent: VentDto;
+  security: SecurityDto;
+}
+
+/** Shape returned by GET /settings (backend returns full entity) */
+export interface SettingsGetDto {
+  deviceMac: string;
+  watering: WateringDto;
+  vent: VentDto;
+  security: SecurityDto;
+  updatedAt: string;
+}
+
+export async function getSettings(devMac: string): Promise<SettingsDto> {
+  const raw = (await api.get<SettingsGetDto>("/settings", { params: { dev: devMac } })).data;
+  return {
+    watering: raw.watering,
+    vent: raw.vent,
+    security: raw.security,
+  };
 }
 
 export async function updateSettings(devMac: string, dto: SettingsDto) {
