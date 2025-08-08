@@ -51,7 +51,9 @@ describe("<SettingsPage>", () => {
     // (wrapped in try so we don't fail if it's already gone)
     try {
       await waitForElementToBeRemoved(() => screen.getByTestId("loader"), { timeout: 3000 });
-    } catch {}
+    } catch {
+      /* loader may already be gone — that's fine */
+    }
 
     // Grab the input via its <label> text
     const humLo = await screen.findByLabelText(/low humidity/i);

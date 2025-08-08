@@ -47,6 +47,13 @@ export type MeasurementKey =
   | "accelX"
   | "accelY"
   | "accelZ";
+  
+type TelemetryRow = Telemetry & {
+  motionFlag: number;
+  tamper: number;
+  time: string;
+  dateTime: string;
+};
 
 /* friendly labels */
 export const measurementOptions: { value: MeasurementKey; label: string }[] = [
@@ -61,6 +68,20 @@ export const measurementOptions: { value: MeasurementKey; label: string }[] = [
   { value: "accelY",      label: "Tamper Y (g)"    },
   { value: "accelZ",      label: "Tamper Z (g)"    },
 ];
+
+const pickValue: Record<MeasurementKey, (r: TelemetryRow) => number> = {
+  temperature: r => r.temperature,
+  humidity   : r => r.humidity,
+  soil       : r => r.soil,
+  lux        : r => r.lux,
+  level      : r => r.level,
+  motionFlag : r => r.motionFlag,
+  tamper     : r => r.tamper,
+  accelX     : r => r.accelX,
+  accelY     : r => r.accelY,
+  accelZ     : r => r.accelZ,
+};
+
 
 /* colour palette used for header/cell highlights + line strokes  */
 const colourMap: Record<MeasurementKey, { hdr: string; cell: string; stroke: string }> = {
@@ -78,7 +99,6 @@ const colourMap: Record<MeasurementKey, { hdr: string; cell: string; stroke: str
 
 const LOW_SOIL  = 30;
 const HIGH_TEMP = 30;
-
 
 
 /* ─────────────────────── DateInput helper ─────────────────────── */
@@ -205,7 +225,7 @@ export default function TelemetryPage() {
   }, [selectedMac]);
 
   /* ───── derive filtered data ───── */
-  const filtered = useMemo(() => {
+  const filtered = useMemo<TelemetryRow[]>(() => {
     if (!startDate || !endDate) return [];
     return data
       .filter(d => {
@@ -273,7 +293,7 @@ export default function TelemetryPage() {
       {alarmEvents.length > 0 && (
         <div className="mb-6 rounded-md bg-red-50 p-3 text-sm text-red-700">
           <strong>Alarm triggered</strong> {alarmEvents.length} time
-          {alarmEvents.length > 1 && "s"}: {" "}
+          {alarmEvents.length > 1 && "s"}:{" "}
           {alarmEvents
             .slice(-5)
             .map(e => e.timestamp.replace("T", " ").slice(0, 19))
@@ -297,7 +317,7 @@ export default function TelemetryPage() {
             ))}
           </select>
 
-          <button
+        <button
             type="button"
             className="btn btn-outline-primary h-9 flex items-center gap-1 whitespace-nowrap"
             onClick={() =>
@@ -425,7 +445,7 @@ export default function TelemetryPage() {
                         {["motionFlag", "tamper"].includes(opt.value)
                           ? (opt.value === "motionFlag" ? d.motion : d.tamper)
                               ? "⚠️" : "OK"
-                          : Number((d as any)[opt.value as keyof typeof d]).toFixed(2)}
+                          : pickValue[opt.value](d).toFixed(2)}
                       </td>
                     );
                   })}

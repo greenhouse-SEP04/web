@@ -52,8 +52,9 @@ export default function DeviceListPage() {
         const enriched: DeviceWithMeta[] = await Promise.all(
           base.map(async (d): Promise<DeviceWithMeta> => {
             let range: Range | null = null;
-            try { range = await getTelemetryRange(d.mac); } catch {}
-
+            try { range = await getTelemetryRange(d.mac); } catch {
+              /* ignore per-device network error; we’ll show offline/unknown */
+            }
             return {
               ...d,
               status    : range?.online ? "online" : "offline",
