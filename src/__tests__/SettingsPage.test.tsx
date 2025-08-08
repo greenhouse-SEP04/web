@@ -1,23 +1,23 @@
+// D:\source\SEP04_greenhouse\web\src\__tests__\SettingsPage.test.tsx
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-/* --------------------------------------------------------------------------
-   service-layer stub – declare first, reuse inside vi.mock
---------------------------------------------------------------------------- */
-const saveSettingsMock = vi.fn();
+// stub the service-layer to match the new component
+const updateSettingsMock = vi.fn();
 
 vi.mock("@/services/api", () => ({
-  listDevices : vi.fn().mockResolvedValue([
-    { mac: "AA:BB:CC", name: "Greenhouse 1" },
+  listDevices: vi.fn().mockResolvedValue([
+    { mac: "AA:BB:CC", name: "Greenhouse 1", ownerId: null, ownerUserName: null },
   ]),
-  getSettings : vi.fn().mockResolvedValue({ onHour: 9, offHour: 18 }),
-  saveSettings: saveSettingsMock,       // reuse the already-declared stub
+  getSettings: vi.fn().mockResolvedValue({
+    watering: { manual: false, soilMin: 40, soilMax: 60 },
+    vent:     { manual: false, humLo: 45, humHi: 60 },
+    security: { armed: false, alarmWindow: { start: "22:00", end: "06:00" } },
+  }),
+  updateSettings: updateSettingsMock,
 }));
 
-/* --------------------------------------------------------------------------
-   component under test
---------------------------------------------------------------------------- */
 import SettingsPage from "@/pages/SettingsPage";
 
 const renderWithRouter = () =>
@@ -27,23 +27,24 @@ const renderWithRouter = () =>
     </MemoryRouter>,
   );
 
-/* --------------------------------------------------------------------------
-   tests
---------------------------------------------------------------------------- */
 describe("<SettingsPage>", () => {
-  beforeEach(() => saveSettingsMock.mockClear());
+  beforeEach(() => updateSettingsMock.mockClear());
 
-  it("blocks save when on-hour > 23", async () => {
+  it("blocks save when Soil Min is out of range", async () => {
     renderWithRouter();
 
-    const onHour = await screen.findByRole("spinbutton", { name: /on/i });
+    // wait for settings to load
+    const soilMin = await screen.findByLabelText(/soil min/i);
 
-    fireEvent.change(onHour, { target: { value: "28" } });
+    // set an invalid value (below 20)
+    fireEvent.change(soilMin, { target: { value: "10" } });
+
+    // attempt save
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
+    // expect the API not to be called due to validation failure
     await waitFor(() => {
-      expect(onHour).toHaveAttribute("aria-invalid", "true");
-      expect(saveSettingsMock).not.toHaveBeenCalled();
+      expect(updateSettingsMock).not.toHaveBeenCalled();
     });
   });
 });

@@ -11,6 +11,11 @@ const axiosStub = {
   },
   post: vi.fn(),
   get : vi.fn(),
+  // 👇 add this so api.ts can call api.interceptors.request/response.use(...)
+  interceptors: {
+    request: { use: vi.fn() },
+    response: { use: vi.fn() },
+  },
 };
 
 vi.mock("axios", () => ({
