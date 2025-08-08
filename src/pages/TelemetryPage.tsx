@@ -36,7 +36,7 @@ import { waterIcon, inWindow } from '@/utils/telemetry';
  *  keep the column in the table while still letting the chart treat it as a
  *  numeric spike, just like `motionFlag`.
  */
-export type MeasurementKey =
+type MeasurementKey =
   | "temperature"
   | "humidity"
   | "soil"
@@ -56,7 +56,7 @@ type TelemetryRow = Telemetry & {
 };
 
 /* friendly labels */
-export const measurementOptions: { value: MeasurementKey; label: string }[] = [
+const measurementOptions: { value: MeasurementKey; label: string }[] = [
   { value: "temperature", label: "Temperature (°C)" },
   { value: "humidity",    label: "Humidity (%)"    },
   { value: "soil",        label: "Soil (%)"        },

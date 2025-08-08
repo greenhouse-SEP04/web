@@ -25,7 +25,6 @@ const server = setupServer(
    Admin user is logged in. */
 vi.mock("@/context/AuthContext", () => {
   return {
-    /* eslint-disable react-hooks/rules-of-hooks */
     useAuth: () => ({
       authed: true,
       user: { id: "1", userName: "admin", roles: ["Admin"] },

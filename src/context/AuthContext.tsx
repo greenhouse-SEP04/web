@@ -1,3 +1,4 @@
+// src/context/AuthContext.tsx
 import {
   createContext,
   useContext,
@@ -146,4 +147,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* Fast Refresh: allow non-component export without warning */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(Ctx);
