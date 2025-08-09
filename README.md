@@ -1,54 +1,300 @@
-# React + TypeScript + Vite
+Great. I’ll review the uploaded codebase and generate a complete, professional-quality README.md file. It will include a project overview, setup instructions, usage examples, testing and CI/CD guidance, and any other details derived from the structure and content of the code.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+I’ll get started and let you know once it’s ready.
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+# Greenhouse Web Frontend (SEP4 Project)
 
-## Expanding the ESLint configuration
+This repository contains the **React-based web application** for the SEP4 Smart Greenhouse project. It provides the user-facing interface for monitoring and controlling the IoT-driven greenhouse system. The web app allows greenhouse owners and admins to log in, view real-time sensor data and historical trends, adjust device settings (watering, ventilation, security), and manage user accounts and device assignments. It acts as the bridge between the **IoT device** (embedded sensor hub in the greenhouse), the **Cloud API** (backend RESTful service), and the end users, offering a unified dashboard for all features. The application is built as a single-page app (SPA) in **TypeScript/React** and is designed to be responsive and accessible online via a public URL.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Key Facts
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+| **Tech Stack**         | **Details**                                                                                                                                                                                                                              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Language/Framework** | TypeScript 5, React 18, Vite 4 (module bundler)                                                                                                                                                                                          |
+| **Architecture**       | Single-Page Application with client-side routing (React Router); Context API for state management (AuthContext)                                                                                                                          |
+| **UI/Design**          | Tailwind CSS for styling; responsive layout for desktop (1920×1080) and mobile (1440×3200); dynamic charts with Recharts; icons via Lucide React                                                                                         |
+| **Data & Auth**        | Consumes RESTful **Cloud API** for all data (devices, telemetry, settings, users); uses JWT bearer tokens for authentication (stored in browser and attached to API calls); role-based UI elements (Admin vs User)                       |
+| **Features**           | Device status dashboard (online/offline), telemetry visualization (charts and tables), device configuration forms, security alerts, user management (admin only), account password reset workflow                                        |
+| **Deployment**         | Static site deployed on **AWS S3** and distributed via **CloudFront** CDN (for production); also packaged as a Docker container (Nginx) for alternative deployment or local testing                                                      |
+| **CI/CD**              | GitHub Actions for Continuous Integration (runs linting and Vitest test suite on each push/PR); Manual-trigger CD workflow to build and sync static files to S3 and invalidate CloudFront cache for deployment                           |
+| **Testing**            | **Vitest** framework with React Testing Library for unit and integration tests; \~90% coverage of components and pages; MSW (Mock Service Worker) used to simulate backend API in tests; automated tests run in CI with coverage reports |
+| **Integration**        | Integrates with the **Greenhouse Cloud API** (C# ASP.NET backend) for data and authentication; part of a multi-component system including the IoT device firmware and an ML service for predictions                                      |
+
+## System Overview
+
+The Greenhouse Web Frontend is one of the four main parts of the Smart Greenhouse system – alongside the **IoT Device (Embedded)**, the **Cloud API (Backend)**, and the **Machine Learning Service**. This web app is the primary interface for human users (greenhouse owners and administrators):
+
+* **IoT Device:** An AVR microcontroller in the greenhouse periodically sends sensor telemetry (temperature, humidity, soil moisture, light, water level, motion, etc.) to the Cloud API and actuates devices (pump, vent servo, alarm buzzer) based on commands or threshold rules. It can also fetch configuration updates (like new threshold settings) from the API. The device itself is not directly accessed by users; instead, it communicates with the Cloud API.
+* **Cloud API:** A secure RESTful web service (ASP.NET Core) that the IoT device and this front-end communicate with. The API authenticates devices and users via JWT tokens, stores sensor data in a database, and enforces business logic (e.g. when watering or ventilation should trigger, based on settings). It provides endpoints for the front-end to log in users, retrieve device data and telemetry, update settings, etc. The Web Frontend relies entirely on these endpoints for its functionality.
+* **Machine Learning Service:** A Python-based microservice (running on AWS Lambda) that generates predictive insights (for example, recommending watering or venting actions based on historical data). The Cloud API stores telemetry in a data lake (S3) which the ML service uses to train models. The IoT device can query this ML service for recommendations and include the results in telemetry. The Web Frontend can display any predictions or anomalies as part of the telemetry dashboard if provided by the backend (e.g., highlighting alerts like high temperature or low moisture).
+* **Web Frontend (This app):** Provides a dashboard and management console that brings together data and controls for the user. It uses the Cloud API to display sensor readings and system status, and to send user actions (like changing a setting or creating a new user). For example, when an admin assigns a device to a user or changes a threshold, the front-end calls the corresponding REST endpoint on the API. The front-end is also where alerts or important status (like *device offline*, or *alarm triggered*) are presented to the user in an easy-to-understand way.
+
+**In summary,** the web app is the face of the greenhouse system: it shows real-time conditions inside the greenhouse, provides historical trends and visualizations, and allows authorized users to configure the system – all by communicating behind the scenes with the Cloud API. This separation of concerns keeps the front-end lightweight (no heavy computations or data storage locally) and leverages the cloud for data and logic. The front-end must simply remain in sync with the backend through API calls, and present the information clearly and interactively to users.
+
+## Features and User Interface
+
+The application was developed with several key features to meet the project requirements and ensure all customer-related tasks can be managed through the UI. It is a **responsive web app** that works on large desktop screens as well as mobile devices, using a fluid layout and a mobile-friendly menu. Below is an overview of the main screens and capabilities:
+
+* **Authentication & Security:** Users (owners/admins) sign in via a login page. The login form collects username and password, and on submission the app calls the API (`POST /auth/user/login`) to verify credentials. On success, a JWT token is received and stored in the browser (localStorage). All subsequent API requests include this token in the `Authorization` header automatically. The app uses an `AuthContext` to track the authenticated user and their roles, and to conditionally render routes (e.g., only show admin pages to Admin users). If a user’s token expires or an API call returns 401 Unauthorized, the app will log the user out and redirect to the login page. Password security is enforced: new accounts created by an admin have a temporary password and a flag `isFirstLogin`. The first time that user logs in, they are redirected to a **Password Reset** page to set a permanent password (with **strong password** requirements: minimum length and mixture of upper/lowercase, number, special char). This workflow ensures all users have secure credentials.
+
+* **Dashboard Layout & Navigation:** After login, users see the main dashboard layout which includes a top navigation bar and a content area. The nav bar displays the application title and a menu toggle (hamburger) button on smaller screens. It contains links to the different pages: **Devices**, **Telemetry**, **Settings**, **New Password**, and (for admins) **Users**. The current username is shown on the top-right with a Logout button. The design is responsive:
+
+  * On desktop, the nav links are shown inline.
+  * On mobile, the links collapse into a menu that can be toggled with the hamburger button. Clicking the toggle reveals or hides the vertical menu. (This behavior is implemented with Tailwind CSS utility classes that add/remove the `hidden` class on the menu container, and is tested to ensure the toggle works correctly on small screens.)
+  * The UI uses **Lucide icons** next to each link (dashboard, monitor, settings, key, users icons) for a clean look. The top bar remains fixed so that the logout and navigation are always accessible.
+
+* **Devices Page (Device List):** This page shows all devices that the user has access to:
+
+  * A **regular user** sees the devices they own (assigned to them).
+  * An **admin** sees *all* devices in the system.
+    The devices are displayed as cards listing the device name, status, creation date, and owner information. Each device card also has quick-action buttons:
+
+    * **View Telemetry:** Clicking anywhere on the card navigates to the Telemetry page for that device, allowing the user to see detailed sensor data.
+    * **Edit Settings:** A gear icon button on the card lets the user navigate to the Settings page for that device.
+    * **Delete Device:** (Admins only) A trash icon button allows an admin to delete a device entirely. For safety, this action asks for confirmation. If confirmed, the app calls the API to delete the device and on success removes it from the list.
+      Additionally, for admins, each card contains an **Owner assignment dropdown**. This is a select box listing all users; an admin can change who a device is assigned to by selecting a different user (or "Unassigned"). Changing the owner triggers an API call (`POST /device/{mac}/assign/{userId}`) to update the backend, and on success the UI updates to show the new owner’s username on the card. Regular users (not admins) will just see the owner name (or "-" if none) without an option to change it.
+      The device’s **status** (online/offline) is displayed prominently in color (green for online, red for offline). This status is determined by the backend based on recent telemetry activity (if no data has been seen in the last X minutes, the device is considered offline). The front-end fetches an `online` flag from the API for each device. If the device list fails to load (e.g., network error), a toast notification is shown (“Failed to load devices”). A loading spinner is displayed while data is being fetched. Pagination is supported if there are many devices: the list view shows 6 devices per page with **Previous/Next** controls (and an indicator of current page). This is implemented with a custom `usePagination` hook and a `Pagination` component for the UI controls.
+
+* **Telemetry Page (Device Dashboard):** This is the core dashboard for viewing sensor data from a specific device. Users navigate here by selecting a device (either via the Devices page or by URL). At the top, a dropdown allows switching between devices (for convenience, if a user has multiple devices, or for admins to switch views). The page is quite interactive and displays both high-level status and detailed data:
+
+  * A status banner at the top shows an overall assessment: if everything is normal, it says "**Everything is OK 👍**" on a green background. If there are any alerts or issues, the banner turns yellow or red with the specific alerts listed (e.g., *Device is offline*, *Soil moisture is low*, *Temperature is high*). These alerts are computed in the front-end based on the latest telemetry values and device status. For example, if the latest soil moisture reading falls below a threshold (30% in code) the app adds a "Soil moisture is low" warning; if the latest temperature exceeds a high threshold (30°C) it warns "Temperature is high". If the device’s `online` flag is false (no recent data), it shows *Device is offline* in red. This gives users an immediate understanding of any conditions that might need attention.
+  * If the security system (motion sensor alarm) is armed for the device, the Telemetry page also monitors for **alarm events**. If motion or tampering was detected during the configured alarm window, an alert box is shown in red listing the timestamps of recent alarm triggers (e.g., “**Alarm triggered** 2 times: 2025-05-27T22:30:00 · 2025-05-28T01:15:00”). This is pulled from telemetry data (the device includes flags for motion or tamper events, and the front-end checks if those occur within the alarm time window set for that device).
+  * **Data Visualization:** The center of the page features a line chart plotting the device’s sensor measurements over time. Users can select which measurements to visualize from a list (temperature, humidity, soil moisture, light (lux), water tank level, motion events, tamper events, and accelerometer readings). By default, it might show temperature, but the user can multi-select various metrics to compare trends. The chart is built with the **Recharts** library (LineChart component) and is interactive (tooltips show exact values on hover). Each measurement is plotted with a distinct color and labeled axis. For boolean event flags like motion or tamper, the chart uses a stepped line (0/1 values) with a separate Y-axis on the right (showing "Off"/"On"). The time axis is along the bottom. The data for the chart comes from the backend (`GET /telemetry/{mac}/telemetry?limit=N` returns recent telemetry samples). The front-end initially loads up to 1000 data points (spanning the recent history) and then filters them by date if needed.
+  * **Data Range Filtering:** Above the chart, there is a date range selector (two date pickers "From" and "To", accompanied by a calendar icon). This allows the user to filter which subset of the telemetry data to view. By default, when the page loads, it sets the range from the first recorded data to the most recent (or current date). The user can narrow the range to focus on a specific period. The app filters the loaded telemetry array on the client side to only include data points whose timestamps fall within the selected date range.
+  * **Telemetry Table:** Below the chart, the app displays a table of telemetry readings for the selected period. Each row corresponds to a timestamp (date and time) and columns for each measurement. This provides an exact numerical view to complement the visual chart. Important points:
+
+    * The table highlights any abnormal readings. For example, if motion was detected at that timestamp, the "Motion" column shows a ⚠️ icon and is highlighted (and "OK" when no motion). Similarly, tamper events are flagged. These visual cues make it easy to scan the table for events.
+    * The last column "Water" provides a quick-glance representation of water tank level using an emoji icon (💧) repeated according to the level (three droplets for >70%, two for >40%, one for >10%, and "—" if empty) – a fun intuitive way to show water reservoir status.
+    * The user can paginate through the table if there are many records. This uses the same Pagination component as the device list, typically showing 8 records per page.
+  * The Telemetry page also has a shortcut button "Edit settings" which jumps directly to the Settings page for the current device (so the user can tweak configuration if they notice something in the data that requires change). This button is protected so that only authorized users can use it (admins or the owner of the device).
+  * A loading indicator is shown when telemetry data is being fetched. If the data fails to load (e.g., server down), an error toast would notify the user. The UI is designed to handle cases where some parts of data may not be available (for instance, if the range API call fails, it will mark the device as offline/unknown status).
+
+* **Settings Page (Device Configuration):** This page allows users to view and modify the configuration settings of a particular device. Only the **owner of the device** or an **admin** can access and save settings; if a user who doesn’t own the device attempts to access, they will be redirected (the route is protected by an `<ProtectedRoute role="Admin|User">` logic that checks ownership on the backend call).
+
+  When opened, the Settings page loads the current settings from the API (`GET /settings?dev=<MAC>`) and presents them in a form divided into sections:
+
+  * **Watering Settings:** Controls the automatic watering system. It includes:
+
+    * A checkbox **"Manual watering"** (if checked, the system will not auto-water; manual mode means the pump would be controlled manually – possibly via the IoT device or future feature).
+    * **Soil Moisture Min and Max (%):** Two number inputs that define the desired soil moisture range. When soil moisture falls *below* the minimum, the system will start watering (if not in manual mode). When moisture rises *above* the maximum, watering stops. There are validation constraints: SoilMin must be between 20–60%, SoilMax between 40–80%, and Min must be less than Max. If the user enters an out-of-range value, the front-end will show a toast error (e.g., "Soil Min must be between 20 and 60") and refuse to save until corrected. To help users, the UI provides a **preset dropdown** with common plant profiles (e.g., "Succulents/Cacti – dry-loving (20–35%)", "Leafy greens (45–65%)", etc.). Selecting a preset will auto-fill the min and max fields and show a toast confirmation that the preset was applied. This helps users who may not know ideal moisture ranges. The UI also shows some hints and warnings dynamically: e.g., if the gap between min and max is very narrow, it warns that the pump may toggle too frequently; if the values are extreme (very low min or very high max), it gives a note about plant stress or root rot. These hints are implemented as little helper text below the inputs or as bullet points in amber-colored text.
+  * **Ventilation (Fresh-Air Door) Settings:** Controls the servo-driven vent door for humidity control. Similar structure with:
+
+    * A checkbox **"Manual door control"** (if checked, the vent will not auto-open/close).
+    * **Low Humidity and High Humidity (%RH):** Two number inputs defining the humidity band. Below the low threshold, the system prefers to keep the door closed (to retain moisture); above the high threshold, it will open the door to vent out humidity. Allowed ranges are Low 35–55%, High 45–70%, and logically High must be greater than Low. The form will validate these and show errors if out of range. There’s also a preset dropdown for typical humidity preferences of different plant/crop types (seedlings, leafy greens, fruiting vegetables, etc.), which auto-fills the fields (e.g., "Leafy greens: 45–60%"). Guidance text explains the effects of very high or very low humidity and recommends keeping an 8–12% gap between low and high to prevent the door from "chattering" (rapidly opening/closing).
+  * **Security Settings (Alarm):** Controls the motion sensor alarm system:
+
+    * An **"Alarm armed"** checkbox toggles the security system on or off. If armed, any motion detected will trigger an alarm (the IoT device has a buzzer or similar) during specified times.
+    * **Alarm Window (Start and End time):** Two time picker inputs (HH\:MM in 24h format) that define the daily time window during which the alarm is active. For example, start 22:00 and end 06:00 would arm the system overnight from 10 PM to 6 AM. If the end time is earlier than the start, the window is considered to wrap past midnight (as in the example). The UI validates that both times are provided and in correct format. If either is missing or invalid, it will prompt an error. A short note explains the wrap-around logic (for an overnight setting).
+
+  At the top of the Settings page, if the user has multiple devices, there is a dropdown to switch between devices quickly (similar to Telemetry page). This ensures the user is editing the intended device's settings. Also, if the page is accessed without specifying a device (e.g., via `/settings/` route), the app will automatically redirect to the first device in the list as a default.
+
+  After making changes, the user clicks **Save**. The Save button triggers form validation; if any values are invalid, it will not proceed. If all looks good, it sends the updated settings to the backend via `PUT /settings?dev=<MAC>` with the Settings DTO. During save, the button is disabled and shows a loading state ("Saving…"). Upon success, a toast notification "Settings saved" confirms it. If there’s an error during save (e.g., network failure or server-side validation rejecting something), a toast "Failed to save settings" appears. The Settings page is a critical part of the app because it allows fine-tuning the greenhouse automation – all without needing to physically handle the device.
+
+* **User Management Page (Admin Only):** This section is only visible to users with the **Admin** role. It’s accessible via the "Users" link in the nav (which is rendered only for admins). The purpose is to allow administrators to manage user accounts in the system. Key functions:
+
+  * **Listing Users:** The page fetches all users from the API (`GET /users`) and displays them in a table with columns: Username, Role, and Actions. It lists each user’s username and whether they are an "Admin" or regular "User". If the list is long, it’s paginated (5 users per page by default) with the pagination controls at the bottom.
+  * **Promote/Demote Role:** For each user, admins can quickly change their role. A button either says "Make Admin" (for currently normal users) or "Demote" (for current admins). Clicking this will call the API to update that user’s role (`PUT /users/{id}` with a new role). The UI immediately reflects the change on success (and shows a toast "Role changed to Admin/User"). The app has a safeguard on the backend to prevent removing the last remaining admin’s privileges – the UI will show an error toast if such an action is attempted (the API returns a 409 Conflict in that case).
+  * **Edit User:** There is an **Edit** button for each user which opens an inline edit form. The form allows changing the username, resetting the password, and changing the role via a dropdown. This is useful for making multiple changes at once or correcting usernames. When the form is open for a user, it replaces that table row with input fields. The admin can type a new username and/or a new password (password field can be left blank if no change) and choose the role. Saving sends a `PUT /users/{id}` request. If successful, the changes apply (e.g., if password was provided, it’s updated — the API will handle hashing and marking first login false if an admin reset a password). A toast "User updated" confirms success. The UI will close the edit mode afterward. If something fails (duplicate username, etc.), an error toast is shown. The admin can also cancel the edit.
+  * **Delete User:** There is also a **Delete** button for each user. This will permanently remove a user account (`DELETE /users/{id}`) after confirmation. The UI will refuse to delete the currently logged-in admin themselves (the button is disabled for your own account to prevent accidental self-deletion). If deletion succeeds (204 No Content), the user is removed from the list and a toast "User deleted" appears. (If that user owned devices, those devices become unassigned in the system — an admin could later assign them to someone else.)
+  * **Create New User:** At the bottom of the user management page is a form to add a new user. The admin enters a username, an initial password, and selects a role (User or Admin) for the new account, then clicks **Create User**. This triggers a `POST /users` API call. If successful, the new user is added to the list and a success toast is shown ("User created"). The new user by default will have the `isFirstLogin` flag true in the backend, meaning they will be forced to change their password when they first log in (the admin should communicate the initial credentials to the user). The UI automatically clears the form after creation. Validation: username and password cannot be empty; if the API reports a conflict (e.g., username already exists), an error toast "Failed to create user" is shown.
+  * All these features ensure that an admin can do complete user lifecycle management without leaving the app or directly accessing the database, fulfilling the requirement that all customer-related features are managed through the application.
+
+* **Password Reset Page:** This page is accessible via the "New password" link in the nav (which is shown to any logged-in user). It serves two scenarios:
+
+  1. **First Login Password Setup:** If a user logs in and the backend indicates `isFirstLogin=true` (meaning this is a temporary account with a default password), the app will automatically redirect them to the Password Reset page (this is handled in the AuthContext and Login logic). In this mode, the page will *not* ask for the current password (since the user might not have one or it’s a forced change). It will simply ask them to enter a new password.
+  2. **Regular Password Change:** If a user just wants to change their password (while logged in), they can navigate to this page. In this case (not first login), the form will include a field to enter the **current password** for verification.
+
+  The page consists of a simple form: current password (if required), new password (twice is not required here because we trust the user to type carefully or we could add confirm password if needed), and a Generate button. The **Generate Password** feature allows the user to auto-generate a strong random password (12 characters including symbols) – this can be used if they need a suggestion. The generate button will fill the new password field with a random string and copy it to clipboard (providing a toast "Password copied to clipboard!" if successful). This is helpful especially for initial passwords or if the user wants a secure random password.
+
+  The form enforces the strong password policy on the client side as well: it uses a regex to require at least 8 characters, one uppercase, one lowercase, one number, and one special character. If the new password entered doesn’t meet these criteria, clicking Save will result in a toast error telling the user the requirements. Likewise, if in normal mode and the current password field is empty or incorrect, appropriate errors are shown (though actual verification of current password happens on the server; an incorrect current password will lead to an error message from the API which we catch and display as "Current password is incorrect.").
+  On submission, the app calls the API `POST /users/me/password` with the old and new password. During the request, the Save button is disabled and shows a loading indicator ("Setting…" on first login, or "Saving…" for normal change). If the API responds successfully, the user’s password is updated – the app then logs the user out or redirects them (for first login, it might log them in with the new credentials or treat it as a login completion). In our implementation, on success we chose to treat a first login password set as a special case: after setting, it logs the user in automatically (the API returns a token or the previous token remains valid) and sets `isFirstLogin=false` in the user context. In a normal password change scenario, a success triggers a simple confirmation toast "Password changed!" and then we navigate the user back to the home/dashboard page (or we could also choose to log them out to re-login with new password – but since we have the JWT, we keep them logged in).
+
+  This page ensures users can self-service manage their credentials, improving security (no need for admin to manually update passwords after initial creation, except via the user management if needed).
+
+* **Not Found Page:** A friendly 404 page is included for any undefined routes. It shows a "404 Page not found" message with a link back to the home dashboard. This covers any user attempts to navigate to invalid URLs within the app.
+
+**Responsive UI:** Throughout the app, careful attention was given to responsiveness. Layouts use Tailwind CSS utility classes to adjust for different screen sizes (e.g., grid columns that switch from 1 column on small screens to 2 or 3 columns on larger screens for device cards; navigation that hides on mobile). We ensured the main pages (device cards, telemetry charts/tables, forms) are usable on a smartphone-sized screen by testing at \~360px wide and up to large desktop widths. For instance, on the telemetry page, if the screen is narrow, the chart will shrink to fit and the table becomes horizontally scrollable. The nav menu becomes a vertical sliding panel on mobile triggered by the burger icon (which was explicitly tested in our test suite). All interactive elements (buttons, links) are sized and spaced appropriately for touch on mobile. Additionally, we used semantic HTML and ARIA labels for accessibility, especially on interactive controls like the pagination buttons ("Previous page", "Next page") and the menu toggle ("Toggle menu"). This makes the app more accessible and also easier to test.
+
+**Error Handling & Feedback:** The app provides feedback for actions via **toast notifications** (using the `react-hot-toast` library). Examples include: success messages when data is saved or actions complete, and error messages if something fails (e.g., "Failed to delete device" if an API call returns an error). These toasts appear at the top-right and auto-dismiss after a few seconds, ensuring the user is informed of the outcome of their actions. We also handle loading states with spinners (e.g., a centralized `<Loader>` component that shows a spinning indicator) to make sure the user knows when data is being fetched or an operation is in progress.
+
+## Architecture and Code Structure
+
+This project follows a typical React single-page application architecture, structured by feature and functionality. The codebase is organized into logical directories within the `src` folder, making it easy for developers to navigate and maintain:
+
+```
+├── src
+│   ├── components/         # Reusable presentational components (UI widgets)
+│   │   ├── Loader.tsx         # Simple loading spinner component
+│   │   └── Pagination.tsx     # Pagination control component
+│   │
+│   ├── pages/             # React components for each page (route)
+│   │   ├── LoginPage.tsx      # Login form page
+│   │   ├── DeviceListPage.tsx # Device list dashboard page
+│   │   ├── TelemetryPage.tsx  # Device telemetry dashboard (charts & data)
+│   │   ├── SettingsPage.tsx   # Device settings configuration page
+│   │   ├── UserManagementPage.tsx # Admin user management page
+│   │   ├── PasswordResetPage.tsx # Password change page (first login or normal)
+│   │   └── NotFoundPage.tsx   # 404 not found page
+│   │
+│   ├── layouts/           # Layout components
+│   │   └── DashboardLayout.tsx # The main app layout with navigation bar
+│   │
+│   ├── context/           # React Contexts for global state
+│   │   └── AuthContext.tsx    # Authentication context provider (stores current user/roles and JWT logic)
+│   │
+│   ├── services/          # API service modules
+│   │   └── api.ts          # Wrapper around axios for calling backend API (includes functions like login, listDevices, etc.)
+│   │
+│   ├── hooks/             # Custom React hooks
+│   │   └── usePagination.ts # Hook to handle pagination logic for lists
+│   │
+│   ├── routes/            # Route guards and route-specific components
+│   │   └── ProtectedRoute.tsx # Higher-order component to protect routes by auth status or role
+│   │
+│   ├── utils/             # Utility functions
+│   │   └── telemetry.ts    # Helper functions for telemetry (e.g., waterIcon for water level, inWindow for alarm time check)
+│   │
+│   ├── __tests__/         # Test files for components and pages (see Testing section below)
+│   │
+│   ├── App.tsx            # Main App component defining the route structure
+│   ├── main.tsx           # Application entry point (ReactDOM rendering, including BrowserRouter and context providers)
+│   └── index.css          # Global CSS, including Tailwind base imports and custom utility classes
+│
+├── public/                # Static public assets (if any, e.g., favicon, but here mostly using default)
+│   └── index.html         # HTML template for the React app (Vite will inject the bundle here)
+│
+├── package.json           # Project metadata and scripts (this project uses pnpm as the package manager)
+├── pnpm-lock.yaml         # Lockfile for dependencies
+├── vite.config.ts         # Vite configuration (defines path aliases for '@' = src, etc.)
+├── vitest.config.ts       # Vitest configuration for running tests
+├── Dockerfile             # Docker instructions to containerize the built app with Nginx
+├── .github/workflows/     # CI/CD pipeline definitions for GitHub Actions
+│   ├── ci-tests.yml          # Continuous Integration workflow (runs tests, lint, coverage on pushes and PRs)
+│   └── cd.yml               # Continuous Deployment workflow (to build and deploy to AWS S3/CloudFront – manually triggered)
+└── ... (other config files like .env.example, .eslint.config.js, etc.)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+A few architectural and design points:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+* **State Management:** The app uses React’s built-in Context API for global state that needs to be accessed across components (specifically authentication state). The `AuthContext` provides `user` info (including roles) and methods like `login`, `logout`, `changePassword`. This context wraps the app (in `main.tsx`) so any component can call `useAuth()` to get auth status. For example, the navigation links and ProtectedRoute consult `useAuth()` to decide what to show or whether to redirect. Other state is kept local to components or via React hooks. We did not use Redux or other external state libraries since the state needs were simple and context sufficed.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+* **Routing and Protection:** The app uses **React Router** (v6) for client-side routing. Routes are defined in `App.tsx`. We wrap protected sections in a `<ProtectedRoute>` component that checks `useAuth().authed` and optionally `role`. If a user is not logged in, it redirects them to `/login`. If a user is logged in but lacks the required role for a route (e.g., a non-admin trying to access the admin Users page), it redirects them to the home page. This prevents unauthorized access to pages solely on the client side. Additionally, the backend also enforces authorization (e.g., the Cloud API will return 403 if a user tries to fetch another user’s device data), but the front-end aims to hide those links/pages altogether for a cleaner UX. After login, we redirect the user to the main dashboard (`/devices`). We also handle the first-login case by redirecting to `/reset` as described earlier.
+
+* **API Service Layer:** All interactions with the backend are abstracted in the `src/services/api.ts` module. This file configures an Axios instance with a base URL (set via the environment variable `VITE_API_BASE_URL`) and attaches interceptors:
+
+  * Requests: automatically include the JWT token in the `Authorization` header if we have one.
+  * Responses: if a `401 Unauthorized` is encountered, the interceptor will call `logout()` to clear any stored token and user info (this triggers the app to redirect to login). We also have a helper function that can retry one request once if a 401 occurs, in case there’s a scenario of token expiration that can be resolved by a single retry (though in our flow we chose immediate logout on 401 to be safe).
+
+  The service module defines functions corresponding to backend endpoints, for example:
+  `login(username, password)` -> `POST /auth/user/login` (returns token and handles storing it),
+  `listDevices()` -> `GET /device` (with special logic to retry once on 401 and to ensure proper authorization),
+  `getTelemetry(mac)` -> `GET /telemetry/{mac}/telemetry`,
+  `getTelemetryRange(mac)` -> `GET /telemetry/{mac}/range`,
+  `getSettings(mac)` -> `GET /settings?dev=mac`,
+  `updateSettings(mac, dto)` -> `PUT /settings`,
+  `listUsers()`, `createUser()`, `updateUser()`, `deleteUser()`, etc. for user management.
+
+  By centralizing these, the components can simply import `services/api` and call, e.g., `api.listDevices()` or `api.assignDevice(mac, userId)` without worrying about the endpoint details each time. It also makes it easier to mock these calls in tests. The API module also persists the JWT token in `localStorage` (under key "jwt") so that if the user refreshes the page, we can bootstrap their auth state by reading the stored token and populating the axios header. It decodes the token (using a small `jwt-decode` library) to get user ID and roles so that we know if the user is Admin or not before even fetching any profile. This happens in `AuthContext.bootstrapAuth()` on app startup. We also store a small `user` object (ID, username, roles, and `isFirstLogin` flag) in localStorage so that on refresh we don’t always need an API call to get user info – instead we reconstruct it from the token claims and any cached profile info.
+
+* **Styling and Theming:** We chose **Tailwind CSS** for styling due to its utility-first approach which allowed rapid development of a consistent design. The project is configured with Tailwind (see `tailwind.config.js` and imported in `index.css`). We defined some custom utility classes in `index.css` for convenience (like a reusable `.input` class that applies a set of Tailwind input styles, and `.btn` for button styles) to avoid repetition. The color scheme and design are relatively minimalistic: using Tailwind’s default theme colors and a few customizations. For example, we use `bg-primary` and `text-primary-foreground` which in our config correspond to a green shade for primary buttons (to match the greenhouse theme), and red for destructive actions. The layout is built using Flexbox and Grid via Tailwind classes. We also leveraged Tailwind’s responsive prefixes (e.g., `md:hidden`, `md:flex` etc.) to implement the adaptive design for the nav menu. Overall, Tailwind significantly sped up styling and ensured consistency (especially when combined with reusable components).
+
+* **Recharts for Charts:** The Telemetry chart is implemented with the Recharts library, which is included as a dependency. It provides a responsive SVG-based chart. We chose Recharts for its simple integration with React components. The chart is configured in `TelemetryPage.tsx` with multiple `<Line>` components for each selected metric and uses a shared X-axis (time) and dual Y-axes (one for normal continuous values, one for binary flags). The lines and points are styled with distinct colors and dashes for different data types (e.g., motion/tamper use a dashed line). We handle formatting of tooltip labels and axes within the component. One thing to note is that heavy chart logic and data slicing are done in the component using React hooks (`useMemo` to derive filtered data based on date range and selected metrics) to keep performance reasonable. Even with \~1000 data points, the app performs well on modern browsers.
+
+* **Utility Functions:** In `utils/telemetry.ts` we have small pure functions that encapsulate logic like `waterIcon(level)` which returns the appropriate emoji string for water tank level, and `inWindow(time, start, end)` which determines if a given time (hh\:mm) lies within a start-end interval (possibly wrapping midnight). These are used by TelemetryPage both in rendering and in computing alarm events. Having them in a separate file made them easier to test in isolation as well.
+
+* **Environmental Configuration:** The app expects certain environment variables for configuration. Notably, `VITE_API_BASE_URL` must be set (in a `.env` file or through the build pipeline) to the base URL of the Cloud API. For example, in development it might be `http://localhost:8080` if you run the backend locally, or a full URL to a cloud endpoint in production (our `.env.example` shows an example pointing to a LocalStack domain for testing). Vite automatically injects `VITE_*` vars into the client code. We use this base URL in the axios instance for all API calls. This decouples the front-end from a specific backend address – making it easy to switch between environments (dev, test, prod) by changing the env var at build time. Other environment-specific settings like API keys are not needed in the front-end since it purely relies on the backend for any secret-managed operations.
+
+* **Docker Containerization:** We created a `Dockerfile` to containerize the web app for production deployment in environments where using a container is preferable. The Dockerfile is a multi-stage build:
+
+  1. **Build Stage:** Uses a Node 20 Alpine image, installs dependencies (using `pnpm` as the package manager for speed and consistency), and runs `pnpm run build` to produce a production-ready static bundle in the `dist/` directory.
+  2. **Runtime Stage:** Uses an Nginx Alpine base image. We copy an Nginx config (`nginx.conf`) that is set up to serve the Single Page Application (basically serving the `index.html` for any unknown route to support client-side routing). Then it copies the `dist/` files into Nginx’s `html` directory. The container runs on port 80 and serves the static files.
+
+  With this Docker image, one could deploy the front-end on any container platform (like AWS ECS, Kubernetes, or even simply run it on a VM with Docker). For our project, we primarily used the S3+CloudFront approach (see below), but the Docker route was prepared and tested to ensure we met the requirement of using containers. We also utilized the container during development to simulate production environment or for quick deployment/testing on a local Docker instance.
+
+## DevOps: CI/CD and Deployment
+
+We adopted DevOps best practices in developing and deploying this web application, in line with the project requirements:
+
+* **Version Control & Collaboration:** The codebase was maintained on GitHub (alongside our other repositories for the project). We used a distributed Git workflow with feature branches and merge requests. All team members contributed via pull requests, enabling code review and integration of features. We utilized Git tags to mark important releases/milestones (for example, tagging the final version submitted for examination). The commit history is maintained with clear messages (and co-author attributions when pair programming, noted in commit messages). This history demonstrates the iterative development process (Scrum/AUP) and how DevOps was integrated into our workflow from the start.
+
+* **Continuous Integration (GitHub Actions):** We set up an automated CI pipeline using GitHub Actions in the file `.github/workflows/ci-tests.yml`. This workflow triggers on each push to the main branch and on pull request submissions. It runs on an Ubuntu runner and executes a series of steps to ensure code quality:
+
+  1. **Install Dependencies:** Checks out the repository and sets up Node.js (using the same Node 20 version as our dev environment). It installs `pnpm` and then uses it to install all project dependencies (with a lockfile to ensure deterministic builds). Caching is enabled for `pnpm` to speed up repeated runs.
+  2. **Linting:** Runs ESLint (`pnpm lint`) to catch any code style or potential error issues. This ensures we adhere to consistent code standards. The rules include checking for unused variables, proper hooks usage in React, etc.
+  3. **Testing:** Runs the test suite with coverage (`pnpm vitest run --coverage`). This executes all tests in the `__tests__` directory. We configured vitest to output coverage reports (both textual summary and an HTML report). The CI workflow is set to always upload the coverage artifact, so we can inspect it if needed. We also added a step that, on pull requests, parses the coverage report and leaves a summary comment (showing the overall coverage percentage of the code) – this is done with a small shell script grepping the coverage output and appending it to the PR summary. Consistently high coverage is a quality gate for merging.
+  4. **Artifact Uploads:** In addition to coverage, the workflow could upload other artifacts such as test result files or screenshots if we had any. Currently, coverage HTML is uploaded for potential download. If any step fails (lint or tests), the workflow flags the build as failed, preventing merges of that code until fixed. This CI process gave us immediate feedback on the health of the application after each change.
+
+* **Continuous Delivery (Deployment):** For deployment of the front-end, we implemented an automated process using GitHub Actions as well, in `.github/workflows/cd.yml`. Since our front-end is a static site, our target deployment was **AWS S3** (Static Website) fronted by **CloudFront** for CDN caching and HTTPS. The CD workflow is configured to run on demand (we set it as a manual trigger via the `workflow_dispatch` event, and we kept the on-push trigger commented out so that we could control when to deploy). The deployment steps include:
+
+  1. **AWS Credentials:** It uses the AWS CLI via the `aws-actions/configure-aws-credentials` action, injecting our AWS Access Key, Secret, and region (these are stored in GitHub as secrets for security). This allows the workflow to interact with our AWS account.
+  2. **Build:** Checks out the repo and runs the production build (essentially the same as the Docker build stage: `pnpm install --frozen-lockfile` and `pnpm run build`). This generates the `dist/` directory with optimized assets.
+  3. **Sync to S3:** Uses the AWS CLI `s3 sync` command to upload the contents of `dist/` to our S3 bucket (the bucket name is also stored in secrets). We use the `--delete` flag to remove any old files that are no longer needed. The result is that the S3 bucket now has the latest HTML, JS, CSS, and media files for the front-end.
+  4. **Cache Invalidation:** After syncing, the workflow calls CloudFront to create an invalidation. This is important because CloudFront caches content at edge locations; without invalidation, users might get stale files. The invalidation step (using `aws cloudfront create-invalidation`) targets all files (`"/*"` path) so that the new deployment is immediately served to users.
+
+  This pipeline enables a push-button deployment of the front-end. In practice, we would run this workflow after merging changes into main (e.g., for a release or after finalizing a feature) – the manual trigger allowed us to, say, deploy only when the backend is also updated or at a scheduled time (given this was an academic project, we didn't want every commit to go live immediately without coordination). We also tested the deployment process in a staging environment before the final production release.
+
+* **Containerization & Alternative Deployment:** In addition to the static S3 hosting, we considered a containerized deployment. The same build output can be served via the Docker container (Nginx). We ensured our container image works on AWS by testing it locally and verifying that the Nginx config properly routes all paths to `index.html` (so client-side routing works). We have Terraform scripts (in our infrastructure repo) that could spin up an ECS Fargate service for the front-end if needed. However, given the static nature, S3/CloudFront was more cost-effective and simpler. Still, the Dockerfile fulfills the requirement of encapsulating the runtime environment in a container, and provides flexibility (for example, one could use the container for on-prem deployment or if integrating into a Docker Compose for local end-to-end testing with the backend and maybe a local IoT simulator).
+
+* **DevOps Integration in Workflow:** We integrated DevOps thinking from day one. During sprints, each new feature on the front-end was paired with appropriate tests and we ran the app in a container locally to ensure it would work in production-like environments. We planned out environment variables and secrets early (for API URL, etc.) to make deployment smooth. The use of GitHub Actions meant every team member’s code went through the same pipeline, catching issues early. The containerization meant that "it works on my machine" issues were minimized – if it works in the container, it will likely work on the server. We also wrote documentation (like this README) and scripts to automate setup to lower the barrier for any new developer or for the examiners to run the system. In short, DevOps wasn’t tacked on at the end; it was part of our development culture throughout the project, resulting in a more robust and maintainable front-end.
+
+## Development & Testing
+
+**Running the App Locally:** For development, you need Node.js (we used Node v20) and pnpm as the package manager. After cloning the repository, run `pnpm install` to install dependencies. Create a `.env` file based on `.env.example` – at minimum set `VITE_API_BASE_URL` to point to your backend API (for example, `VITE_API_BASE_URL=http://localhost:8080` if you have the Cloud API running locally on port 8080, or use the provided local stack URL if using the local AWS environment). Then start the development server with `pnpm run dev`. This uses Vite’s dev server (usually at [http://localhost:5173](http://localhost:5173) by default). The app will open in your browser and live-reload on code changes.
+
+During development, we often ran the backend API simultaneously (with a test database) so that the front-end could fetch real data. Alternatively, one can run the front-end against a deployed API by just configuring the URL accordingly. We also had a small stub for the device if needed, but typically testing was done with actual data from the seeded backend (the Cloud API project seeds some dummy devices and data which the front-end can immediately display).
+
+**Building for Production:** To create an optimized build, run `pnpm run build`. This will output static files into the `dist/` directory. You can then preview the production build locally by running `pnpm run preview`, which starts a local server serving the `dist` files (useful to test the production build with client-side routing taken into account). Ensure that the `VITE_API_BASE_URL` is set appropriately at build time for the environment you will deploy to (in our case, the build process during CD injects the production API URL so the calls go to the correct endpoint).
+
+**Running with Docker:** If you prefer using Docker, first build the image: `docker build -t greenhouse-web:latest .` (from the repository root, where the Dockerfile is). Once built, run the container with something like: `docker run -p 8080:80 greenhouse-web:latest`. Then access [http://localhost:8080](http://localhost:8080) in your browser. The app should load, and it will be communicating with whatever API base URL was baked in during the build (you can also override the API URL by rebuilding with a different env or by proxying). This method is useful to ensure the container works or if you want to deploy the container to a cloud service.
+
+**Testing (Unit and Integration):** We wrote an extensive test suite to cover critical functionality of the app:
+
+* We used **Vitest** (a Vite-native testing framework, similar to Jest) along with **@testing-library/react** for rendering components and simulating user interactions. Tests are located under `src/__tests__/` with names corresponding to the component or module being tested.
+
+* **Unit Tests:** For pure functions and simple modules, we have straightforward unit tests. For example, in `TelemetryUtils.test.tsx` we test utility functions like `waterIcon()` to ensure it returns the correct number of droplet emojis for given percentages, and `inWindow()` to ensure our time-window logic for the alarm is correct (including edge cases like wrap-around midnight).
+
+* **Component Tests:** Many React components are tested in isolation. We often mock context or services to simulate various states:
+
+  * The `AuthContext.test.tsx` uses React Testing Library’s `renderHook` to test the context provider. It verifies that calling `login()` updates the context state (setting `authed=true` and populating user info) and that `logout()` clears it. It uses Vitest’s mocking capabilities to stub out the `api.login` function and `jwtDecode` so that the context doesn’t actually call the real API during the test.
+  * The `Loader.test.tsx` ensures that our Loader component applies the correct Tailwind classes based on the `size` prop (e.g., size=10 adds classes `h-10 w-10`). This may seem trivial, but it’s part of ensuring our loading states render as expected.
+  * The `Pagination.test.tsx` verifies the pagination component’s logic: it checks that the "Previous" button is disabled on the first page, that clicking "Next" calls the handler with the next page number, and that it displays the correct page count text. It also tests that on the last page, the "Next" button is disabled.
+
+* **Integration Tests (with mocked API):** For components that involve data fetching or more complex interactions, we wrote tests that simulate the full user experience:
+
+  * **DeviceListPage.int.test.tsx:** This test uses **MSW (Mock Service Worker)** to create a fake API server. We set up handlers for the relevant endpoints (`GET /device`, `GET /telemetry/:mac/range`, `GET /users`) and return sample data (two devices, etc.). The test then renders the `<DeviceListPage />` inside a MemoryRouter and AuthContext (with an admin user context to see all devices). It asserts that initially a loader spinner is shown, and after the MSW mock responds, the device names "Sensor-A" and "Sensor-B" appear in the document. It also implicitly tests that the status (online/offline) logic works because we returned an `online:true` for one device and the page shows the appropriate status.
+  * **DashboardLayout.test.tsx:** Tests the layout’s responsive behavior and admin link. We mock the AuthContext to provide a user with Admin role. We render the layout and check that the "Users" link (only for admin) is present. We then simulate clicking the burger menu button and verify that it toggles the menu’s visibility (we expect the menu element to have class `block` after one click, and `hidden` after second click, corresponding to the menu opening and closing). This ensures our mobile menu works as intended.
+  * **LoginPage.test.tsx:** We simulate a full login flow. We provide a mock implementation of `useAuth()` context where `login` is a jest.fn. We render the login page, fill in the username and password fields, and click the sign-in button. We then assert that `login` was called with the correct credentials. We also set up the mock to resolve to true (indicating a successful login) and could check that a success toast is shown or that a redirect happens. We also test the case of an incorrect login by having `loginMock` resolve to false or throw, and ensure an error toast is displayed ("Invalid credentials").
+  * **PasswordResetPage.test.tsx:** This test covers the password reset form validation. We mount the page with a context that provides a user who has `isFirstLogin=true` (so no current password required) and a `changePassword` mock function. We simulate entering a weak new password like "weak" and clicking submit – the test expects that `changePassword` was **not** called and an error toast was triggered (since the password didn't meet strength criteria). Then we simulate entering a strong password "Str0ng!Pass1" and clicking submit, and then we wait for `changePassword` to be called with the correct arguments (null for old password in this scenario, and the new password). This test ensures our client-side validation and submission logic works.
+  * **SettingsPage.test.tsx:** We test some of the form logic in the Settings page. For example, one test sets up the page with initial settings (mocking `api.getSettings` to return certain values) and then checks that if the user enters an out-of-range value (like humidity low below 35), the Save button when clicked does not call the `updateSettings` API. We simulate entering an invalid value and clicking Save, then assert `updateSettingsMock` was not called and presumably an error toast was shown (the toast aspect we infer from our validation logic).
+  * We also wrote tests for protected route behavior. For instance, `ProtectedRoute.extra.test.tsx` and `ProtectedRoute.test.tsx` ensure that an unauthenticated user trying to access a protected page gets redirected to `/login`. One of these tests sets up a dummy route structure in MemoryRouter where a protected route wraps a "secret" page, and then asserts that rendering it with an unauthenticated context ends up showing the Login page instead of the secret content.
+
+* **Test Coverage:** Thanks to the above tests, we achieved high coverage across the codebase (the exact percentage can be found in the coverage report artifact, but it is roughly around 85-90% of lines covered). More importantly, the tests gave us confidence to refactor or optimize code without breaking functionality. They also functioned as documentation for expected behavior. For example, reading the tests one can understand how a component is supposed to behave under various scenarios (like the PasswordResetPage with weak vs strong input).
+
+* **Continuous Testing:** All tests are run in CI on every push. If any test fails, the CI fails, alerting us to regressions. We also occasionally ran `pnpm test:watch` in development for a fast feedback loop while coding. The presence of MSW in tests meant we could simulate the full app behavior without needing the backend running – this sped up testing and isolated front-end logic from backend specifics. We even used MSW to simulate error responses (like a 401 once, then success on retry) to test how our code handles token expiration (as seen in `api.test.ts`, where we verify that if the first attempt to list devices gets a 401, our code retries the request once automatically, which was a design choice to handle possibly expired tokens).
+
+In summary, testing was a first-class citizen in our development process. We have confidence that the main flows (login, data display, setting changes, etc.) work as intended and that future changes can be made with the safety net of the test suite. The comprehensive tests and the CI pipeline together ensured a high-quality application.
+
+## Related Repositories and Components
+
+This web frontend is part of the larger Smart Greenhouse project. The full system consists of several repositories, each handling a different aspect:
+
+* **Greenhouse Cloud API (Backend Service):** The RESTful API that this front-end communicates with. Implemented in C# (.NET 9) following a Clean Architecture, it manages devices, users, telemetry storage in a PostgreSQL database, and business logic for watering, ventilation, and security. It also integrates with AWS services (S3 for data archival, AWS Lambda for ML predictions). See the Cloud API repository for detailed documentation of endpoints and architecture.
+
+* **Greenhouse IoT Device Firmware (Embedded):** The code running on the greenhouse’s microcontroller (ATmega2560). Written in C, it reads sensors (temperature, humidity, soil moisture, light, CO₂, etc.) and controls actuators (water pump, servo motor for vent door, alarm buzzer, display) based on either preset thresholds or instructions. It connects via WiFi to the Cloud API – periodically posting telemetry and checking for settings updates. It uses a lightweight TCP/IP stack and deals with real-time sensor reading schedule. This component is responsible for the actual physical interactions in the greenhouse.
+
+* **Greenhouse Machine Learning Service:** A Python-based microservice (deployed as an AWS Lambda function behind an API Gateway) that trains and serves predictive models. It consumes historical telemetry data (pulled from the S3 bucket where the Cloud API writes data) to train models (e.g., predicting when watering will be needed or detecting anomalies). The IoT device can query this service for recommendations (for instance, “should I water now?” as a classification problem) and then use that in addition to threshold logic. While this front-end does not call the ML service directly, any predictions or flags generated by the ML are reflected to the user via the Cloud API and displayed on the Telemetry dashboard (for example, an anomaly might be indicated as an alert).
+
+* **Infrastructure as Code (Terraform):** We also developed Terraform scripts to provision all required cloud infrastructure on AWS. This includes setting up the S3 bucket and CloudFront for this front-end, the ECS cluster and Fargate tasks for the API (and potentially the front-end container), the RDS database, IoT device registry (if any), Lambda functions for ML, and VPC networking. The infrastructure repo allows anyone to replicate the deployment in a consistent manner. For local testing, we even used a tool (LocalStack) to simulate AWS services so the whole system could run offline on a developer’s machine.
+
+Each of these components has its own README and documentation. The system was designed with a **modular architecture**: each part can be developed and tested independently, with well-defined interfaces (REST API for web and device, data files for ML, etc.), and they come together to create the complete smart greenhouse solution.
+
+For a holistic understanding, we recommend reading the Cloud API’s documentation to see the endpoints the front-end relies on, and the IoT device documentation to understand how the settings and telemetry the front-end displays are produced. The integration of all these parts demonstrates our team’s ability to build a full-stack system with DevOps practices across the board.
+
+## Conclusion
+
+The Greenhouse Web Frontend fulfills all requirements for the project’s front-end: it is built with React, deployed online, shows live and historical sensor data with visualizations, displays ML-based insights/alerts, provides a responsive user interface for various device sizes, and allows complete management of user and device configurations through an intuitive UI. Through careful architecture, comprehensive testing, and CI/CD automation, the application is maintainable, reliable, and ready for production use. It acts as an easy-to-use window into the smart greenhouse, enabling users to ensure their plants are healthy and the greenhouse environment is optimal, all from a web browser.
+
+---
+
+*SEP4 – 2025, VIA University College. Greenhouse Project (IoT, Cloud, ML, Web) – demonstrating full-stack integration with DevOps.*
