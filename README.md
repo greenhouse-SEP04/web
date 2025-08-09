@@ -1,7 +1,3 @@
-Great. I’ll review the uploaded codebase and generate a complete, professional-quality README.md file. It will include a project overview, setup instructions, usage examples, testing and CI/CD guidance, and any other details derived from the structure and content of the code.
-
-I’ll get started and let you know once it’s ready.
-
 
 # Greenhouse Web Frontend (SEP4 Project)
 
