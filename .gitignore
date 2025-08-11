@@ -23,3 +23,13 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# pnpm
+.pnpm-store/
+pnpm-debug.log*
+
+# deps & build
+node_modules/
+dist/
+dist-ssr/
+coverage/
